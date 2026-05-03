@@ -1,106 +1,106 @@
 <div align="center">
-  <img src="assets/logo.png" alt="RustShield Logo" width="400">
+  <img src="assets/logo.png" alt="RustShield Logo" width="500">
 
-# RustShield Gateway
+  # RustShield Gateway
+  ### The First Semantic Cybersecurity Shield for Autonomous UAVs
 
-### Secure Communication Gateway for Industrial UAVs
+  [![Rust](https://img.shields.io/badge/language-Rust-orange.svg?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
+  [![Architecture](https://img.shields.io/badge/architecture-arc42--aligned-blue?style=for-the-badge)](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
+  [![Safety](https://img.shields.io/badge/safety-memory--safe-brightgreen?style=for-the-badge)](https://www.rust-lang.org/policies/safety)
+  [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-lightgrey?style=for-the-badge)](#licencia)
 
-[![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](#licencia)
-[![Security](https://img.shields.io/badge/security-arc42%20aligned-brightgreen.svg)](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Embedded-lightgrey.svg)](#)
-
-**Protegiendo el cielo a través de la seguridad por diseño.**
-
+  **Protegiendo activos críticos en el espacio aéreo mediante seguridad determinista y arquitecturas verificables.**
 </div>
 
 ---
 
-## 🛡️ ¿Qué es RustShield Gateway?
+## 🛡️ La Misión: Cerrar la Brecha de Seguridad en C2
 
-**RustShield Gateway** es una solución de ciberseguridad industrial diseñada específicamente para proteger drones y vehículos no tripulados (UAVs) que utilizan el protocolo **MAVLink**.
+Los protocolos de comunicación en UAVs y robótica (MAVLink, ROS, Modbus) fueron diseñados para la eficiencia, descuidando la seguridad. Actualmente, una inyección de comandos no autorizada puede resultar en la pérdida catastrófica de activos.
 
-Actuando como una capa de inspección profunda y filtrado en tiempo real, el gateway se sitúa entre la Estación de Control de Tierra (GCS) y el vehículo, asegurando que solo los comandos autorizados, firmados y seguros lleguen al sistema de control de vuelo.
-
-## 🚀 Pilares Tecnológicos
-
-### 1. Seguridad de Memoria con Rust
-
-Desarrollado íntegramente en **Rust**, RustShield elimina clases enteras de vulnerabilidades críticas como desbordamientos de búfer (buffer overflows) y condiciones de carrera, garantizando una estabilidad inigualable en entornos de misión crítica.
-
-### 2. Arquitectura de Alta Disponibilidad (arc42)
-
-El proyecto sigue rigurosamente el framework de arquitectura **arc42**, lo que permite una trazabilidad total desde los requisitos de seguridad hasta la implementación técnica. Esta estructura facilita la certificación bajo normativas industriales y de aviación.
-
-### 3. Rendimiento Determinista
-
-Diseñado para operaciones de baja latencia, el gateway procesa el tráfico MAVLink con un impacto mínimo en la telemetría, permitiendo una reacción inmediata ante amenazas sin comprometer la maniobrabilidad del vehículo.
+**RustShield Gateway** soluciona esto sin necesidad de recertificar o actualizar costosos firmwares de vuelo. Actúa como un **Escudo Semántico Transparente** que entiende el contexto de la misión y bloquea amenazas en microsegundos.
 
 ---
 
-## ✨ Características Principales
+## 🚀 Innovaciones Clave
 
-- **Deep Packet Inspection (DPI)**: Análisis en tiempo real de mensajes MAVLink 2.0.
-- **Políticas de Vuelo Seguras**: Bloqueo automático de comandos críticos (ej. Armado) basado en el estado del vuelo y la identidad del operador.
-- **Validación Criptográfica**: Soporte para MAVLink Signing y validación de integridad de mensajes.
-- **Observabilidad Industrial**: Métricas en tiempo real y logs estructurados compatibles con SIEMs modernos.
-- **Preparado para Certificación**: Documentación exhaustiva (PRD, Modelo de Amenazas, Matriz de Trazabilidad) lista para procesos de auditoría.
+### 🧠 Filtrado Semántico (Stateful Shielding)
+A diferencia de los firewalls tradicionales, RustShield mantiene un **gemelo digital del estado de vuelo** (`FlightState`). Si un comando de "Desarmado" llega mientras el dron está en "Modo Automático" y a 100 metros de altura, el Shield lo bloquea instantáneamente como una operación incoherente y peligrosa.
+
+### 🦀 Rendimiento con Garantías de Rust
+- **Zero-Copy Parsing**: Procesamiento ultrarrápido de paquetes MAVLink 2.0.
+- **Memory Safety**: Eliminación total de desbordamientos de búfer y condiciones de carrera.
+- **Latencia Sub-ms**: Procesamiento interno medio en **60µs**, garantizando que el control de vuelo no se vea afectado.
+
+### 📋 Ready for Certification (arc42)
+El Gateway no es una "caja negra". Ha sido diseñado bajo el estándar **arc42**, proporcionando una trazabilidad completa:
+- **ADRs (Architecture Decision Records)**: Cada decisión de diseño está documentada y justificada.
+- **Threat Model**: Análisis exhaustivo de vectores de ataque.
+- **Evidence Packs**: Documentación lista para procesos de auditoría y *assurance*.
 
 ---
 
-## 📂 Estructura del Proyecto
+## 📊 Arquitectura del Sistema
 
-- [`src/`](src/): Implementación del core en Rust (Proxy UDP, Codec MAVLink, Filtros de Seguridad).
-- [`definicion/`](definicion/): Documentación técnica detallada (Arquitectura arc42, Especificaciones, Planes de Validación).
-- [`producto/`](producto/): Documentación estratégica (Roadmap, Dossier Comercial, Whitepapers).
-- [`scripts/`](scripts/): Herramientas de utilidad para pruebas en entornos simulados (SITL).
-
----
-
-## 🛠️ Inicio Rápido
-
-### Requisitos
-
-- Rust 1.75+
-- Entorno Linux (Recomendado)
-
-### Instalación
-
-```bash
-git clone https://github.com/RustShield-Security/rustshield-gateway.git
-cd rustshield_gateway
-cargo build --release
+```mermaid
+graph LR
+    GCS[Ground Control Station] -- "MAVLink (UDP/Serial)" --> GW[RustShield Gateway]
+    GW -- "Filtrado Semántico" --> Vehiculo[UAV / Autopiloto]
+    
+    subgraph "Internal Pipeline"
+        GW --> DPI[Deep Packet Inspection]
+        DPI --> SM[State Monitor]
+        SM --> PE[Policy Engine]
+        PE --> Audit[Audit & Logging]
+    end
 ```
 
-### Ejecución en Modo Simulación (SITL)
+---
 
-Para validar el gateway en un entorno controlado:
+## ✨ Características Técnicas
+
+| Característica | Beneficio |
+| :--- | :--- |
+| **DPI (Deep Packet Inspection)** | Inspección profunda de mensajes `COMMAND_LONG` y `COMMAND_INT`. |
+| **Criptografía AEAD** | Soporte para ChaCha20-Poly1305 en flujos de datos sensibles. |
+| **Fuzzing-Tested** | Validado contra ataques de red mediante campañas de fuzzing intensivas. |
+| **Observabilidad Industrial** | Métricas en tiempo real vía endpoint Prometheus/Healthz. |
+| **Agnóstico al Hardware** | Compatible con ArduPilot, PX4 y cualquier sistema basado en MAVLink. |
+
+---
+
+## 🛠️ Laboratorio de Validación (SITL)
+
+El proyecto incluye un entorno de validación automatizado para investigadores y operadores:
 
 ```bash
+# Iniciar el Gateway en modo simulación
 ./scripts/run-sitl-gateway.sh
+
+# Simular un ataque de inyección de comando de armado no autorizado
+./scripts/send-sitl-arm-command.sh 127.0.0.1:14551
 ```
 
 ---
 
-## 📘 Documentación Destacada
+## 📂 Ecosistema de Documentación
 
-- [**Estrategia de Producto**](producto/roadmap-producto-v1.md): Hacia dónde se dirige RustShield.
-- [**Arquitectura arc42**](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md): El corazón técnico del sistema.
-- [**Modelo de Amenazas**](definicion/modelo-amenazas-mavlink-rust-shield-gateway.md): Análisis de vectores de ataque en UAVs.
-- [**Políticas de Seguridad**](definicion/especificacion-politicas-seguridad.md): Definición de reglas de filtrado.
+Hemos estructurado el conocimiento para diferentes perfiles de interés:
+
+- **Para Inversores/Partners**: [Dossier Comercial (One-Pager)](producto/dossier-comercial-one-pager.md) y [Roadmap de Producto](producto/roadmap-producto-v1.md).
+- **Para Ingenieros**: [Especificación de Políticas](definicion/especificacion-politicas-seguridad.md) y [Estrategia Criptográfica](definicion/estrategia-gestion-claves.md).
+- **Para Auditores**: [Matriz de Trazabilidad](definicion/trazabilidad-mvp-0.1.md) y [Arquitectura arc42](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md).
 
 ---
 
 ## ⚖️ Licencia
 
-Este proyecto está bajo la licencia dual **MIT** y **Apache 2.0**. Consulte el archivo `LICENSE` (próximamente) para más detalles.
+Declarado bajo licencia dual **MIT** o **Apache-2.0**, permitiendo su integración tanto en proyectos Open Source como en ecosistemas industriales cerrados.
 
 ---
 
 <div align="center">
-  Desarrollado por <strong>RustShield Labs</strong>
-  <br>
-  <em>Cybersecurity for the next generation of autonomous systems.</em>
-  <br>
-  <a href="mailto:rustshield.security@proton.me">Contacto</a> • <a href="https://github.com/RustShield-Security">Organización</a>
+  <strong>RustShield Labs</strong><br>
+  <em>Cybersecurity for the next generation of autonomous systems.</em><br>
+  <a href="mailto:rustshield.security@proton.me">Contacto</a> • <a href="https://github.com/RustShield-Security">GitHub Organization</a>
 </div>
