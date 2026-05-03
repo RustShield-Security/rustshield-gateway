@@ -1,0 +1,31 @@
+[transport]
+mode = "udp"
+
+[udp]
+listen_vehicle = "127.0.0.1:14560"
+listen_gcs = "127.0.0.1:14551"
+vehicle_addr = "127.0.0.1:14540"
+gcs_addr = "127.0.0.1:14552"
+read_timeout_ms = 100
+max_datagram_size = 2048
+
+[security]
+certified_ips = ["127.0.0.2"]
+unknown_mode_policy = "block"
+audit_only = false
+block_arm_in_auto_mode = true
+
+[signing]
+policy = "observe"
+link_id = 0
+
+[crypto]
+enabled = false
+
+[logging]
+level = "info"
+payload_logging = false
+
+[metrics]
+enabled = true
+readonly_bind = "127.0.0.1:14600"
