@@ -1,34 +1,39 @@
 <div align="center">
   <img src="assets/logo.png" alt="RustShield Logo" width="400">
 
-  # RustShield Gateway
-  ### Secure Communication Gateway for Industrial UAVs
+# RustShield Gateway
 
-  [![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
-  [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](#licencia)
-  [![Security](https://img.shields.io/badge/security-arc42%20aligned-brightgreen.svg)](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
-  [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Embedded-lightgrey.svg)](#)
+### Secure Communication Gateway for Industrial UAVs
 
-  **Protegiendo el cielo a través de la seguridad por diseño.**
+[![Rust](https://img.shields.io/badge/language-Rust-orange.svg)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](#licencia)
+[![Security](https://img.shields.io/badge/security-arc42%20aligned-brightgreen.svg)](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Embedded-lightgrey.svg)](#)
+
+**Protegiendo el cielo a través de la seguridad por diseño.**
+
 </div>
 
 ---
 
 ## 🛡️ ¿Qué es RustShield Gateway?
 
-**RustShield Gateway** es una solución de ciberseguridad industrial diseñada específicamente para proteger drones y vehículos no tripulados (UAVs) que utilizan el protocolo **MAVLink**. 
+**RustShield Gateway** es una solución de ciberseguridad industrial diseñada específicamente para proteger drones y vehículos no tripulados (UAVs) que utilizan el protocolo **MAVLink**.
 
 Actuando como una capa de inspección profunda y filtrado en tiempo real, el gateway se sitúa entre la Estación de Control de Tierra (GCS) y el vehículo, asegurando que solo los comandos autorizados, firmados y seguros lleguen al sistema de control de vuelo.
 
 ## 🚀 Pilares Tecnológicos
 
 ### 1. Seguridad de Memoria con Rust
+
 Desarrollado íntegramente en **Rust**, RustShield elimina clases enteras de vulnerabilidades críticas como desbordamientos de búfer (buffer overflows) y condiciones de carrera, garantizando una estabilidad inigualable en entornos de misión crítica.
 
 ### 2. Arquitectura de Alta Disponibilidad (arc42)
+
 El proyecto sigue rigurosamente el framework de arquitectura **arc42**, lo que permite una trazabilidad total desde los requisitos de seguridad hasta la implementación técnica. Esta estructura facilita la certificación bajo normativas industriales y de aviación.
 
 ### 3. Rendimiento Determinista
+
 Diseñado para operaciones de baja latencia, el gateway procesa el tráfico MAVLink con un impacto mínimo en la telemetría, permitiendo una reacción inmediata ante amenazas sin comprometer la maniobrabilidad del vehículo.
 
 ---
@@ -55,10 +60,12 @@ Diseñado para operaciones de baja latencia, el gateway procesa el tráfico MAVL
 ## 🛠️ Inicio Rápido
 
 ### Requisitos
+
 - Rust 1.75+
 - Entorno Linux (Recomendado)
 
 ### Instalación
+
 ```bash
 git clone https://github.com/RustShield-Security/rustshield-gateway.git
 cd rustshield_gateway
@@ -66,7 +73,9 @@ cargo build --release
 ```
 
 ### Ejecución en Modo Simulación (SITL)
+
 Para validar el gateway en un entorno controlado:
+
 ```bash
 ./scripts/run-sitl-gateway.sh
 ```
