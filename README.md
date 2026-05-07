@@ -76,6 +76,10 @@ cargo deny check
 The public demo is loopback-only and does not require real hardware, radios,
 QGroundControl or an autopilot.
 
+![RustShield Gateway public lab demo](docs/assets/rustshield-demo.gif)
+
+[MP4 version](docs/assets/rustshield-demo.mp4)
+
 ```bash
 ./scripts/run-public-demo.sh
 ```
