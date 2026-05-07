@@ -259,6 +259,11 @@ async fn log_metrics_snapshot(counters: &Mutex<GatewayCounters>) {
         packets_unsigned_rejected_total = counters.packets_unsigned_rejected_total,
         signing_replay_rejected_total = counters.signing_replay_rejected_total,
         setup_signing_observed_total = counters.setup_signing_observed_total,
+        shadow_policy_would_block_total = counters.shadow_policy_would_block_total,
+        shadow_signing_would_reject_total = counters.shadow_signing_would_reject_total,
+        shadow_unsigned_critical_total = counters.shadow_unsigned_critical_total,
+        shadow_invalid_signature_total = counters.shadow_invalid_signature_total,
+        shadow_replay_total = counters.shadow_replay_total,
         commands_critical_observed_total = counters.commands_critical_observed_total,
         processing_latency_samples = counters.processing_latency_samples,
         processing_latency_total_us = counters.processing_latency_total_us,
@@ -430,6 +435,19 @@ async fn process_datagram(
             } else {
                 inspect_signing(flow, source_ip, datagram, &packet, counters, signing).await
             };
+            if policy.shadow_enforce && signing.policy != SigningPolicy::Enforce && requires_signing
+            {
+                record_shadow_signing_for_command(
+                    flow,
+                    source_ip,
+                    &packet,
+                    command,
+                    counters,
+                    signing.policy,
+                    signing_assessment,
+                )
+                .await;
+            }
             if requires_signing
                 && signing.policy == SigningPolicy::Enforce
                 && !signing_assessment.is_valid()
@@ -456,6 +474,12 @@ async fn process_datagram(
                 flight_mode,
             };
 
+            if policy.shadow_enforce {
+                record_shadow_policy_for_command(
+                    flow, source_ip, &packet, command, counters, policy, &context,
+                )
+                .await;
+            }
             let policy_started = Instant::now();
             let decision = evaluate_command(policy, &context, command);
             counters
@@ -703,11 +727,91 @@ async fn enforce_signing_for_command(
     assessment
 }
 
+async fn record_shadow_signing_for_command(
+    flow: UdpFlow,
+    source_ip: IpAddr,
+    packet: &crate::mavlink_codec::ParsedMavlinkPacket,
+    command: &crate::security_filter::CommandMessage,
+    counters: &Mutex<GatewayCounters>,
+    signing_policy: SigningPolicy,
+    assessment: SigningAssessment,
+) {
+    let reason = match assessment {
+        SigningAssessment::Unsigned => "unsigned",
+        SigningAssessment::Invalid { reason } => reason.as_str(),
+        SigningAssessment::NotRequired | SigningAssessment::Valid => return,
+    };
+
+    {
+        let mut counters = counters.lock().await;
+        counters.record_shadow_signing_would_reject();
+        match assessment {
+            SigningAssessment::Unsigned => counters.record_shadow_unsigned_critical(),
+            SigningAssessment::Invalid {
+                reason: SigningRejectReason::Replay,
+            } => counters.record_shadow_replay(),
+            SigningAssessment::Invalid { .. } => counters.record_shadow_invalid_signature(),
+            SigningAssessment::NotRequired | SigningAssessment::Valid => {}
+        }
+    }
+
+    tracing::warn!(
+        event = "signing.shadow_would_reject",
+        direction = flow.as_str(),
+        message_id = packet.frame.message_id,
+        command = command.command,
+        system_id = packet.frame.system_id,
+        component_id = packet.frame.component_id,
+        source_ip = %source_ip,
+        authenticated = false,
+        signing_policy = signing_policy.as_str(),
+        shadow_enforce = true,
+        reason,
+        "critical or high-risk command would be rejected by signing enforce"
+    );
+}
+
+async fn record_shadow_policy_for_command(
+    flow: UdpFlow,
+    source_ip: IpAddr,
+    packet: &crate::mavlink_codec::ParsedMavlinkPacket,
+    command: &crate::security_filter::CommandMessage,
+    counters: &Mutex<GatewayCounters>,
+    policy: &SecurityPolicy,
+    context: &MessageContext,
+) {
+    let mut shadow_policy = policy.clone();
+    shadow_policy.audit_only = false;
+    shadow_policy.shadow_enforce = false;
+
+    let PolicyDecision::Block(reason) = evaluate_command(&shadow_policy, context, command) else {
+        return;
+    };
+
+    counters.lock().await.record_shadow_policy_would_block();
+    tracing::warn!(
+        event = "security.shadow_would_block",
+        direction = flow.as_str(),
+        rule_id = reason.rule_id.as_str(),
+        severity = ?reason.severity,
+        param2_class = ?reason.param2_class,
+        message_id = packet.frame.message_id,
+        command = command.command,
+        system_id = packet.frame.system_id,
+        component_id = packet.frame.component_id,
+        source_ip = %source_ip,
+        flight_mode = ?context.flight_mode,
+        shadow_enforce = true,
+        "command would be blocked by semantic policy under shadow enforce"
+    );
+}
+
 fn security_policy_from_config(config: &AppConfig) -> SecurityPolicy {
     SecurityPolicy {
         certified_ips: config.security.certified_ips.clone(),
         audit_only: config.security.audit_only
             || config.security.unknown_mode_policy == UnknownModePolicy::AuditOnly,
+        shadow_enforce: config.security.shadow_enforce,
         block_arm_in_auto_mode: config.security.block_arm_in_auto_mode,
         block_critical_when_mode_unknown: config.security.unknown_mode_policy
             != UnknownModePolicy::Allow,
@@ -775,6 +879,17 @@ mod tests {
             custom_mode,
             mavtype: common::MavType::MAV_TYPE_QUADROTOR,
             autopilot: common::MavAutopilot::MAV_AUTOPILOT_ARDUPILOTMEGA,
+            base_mode: common::MavModeFlag::MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            system_status: common::MavState::MAV_STATE_STANDBY,
+            mavlink_version: 3,
+        }))
+    }
+
+    fn px4_heartbeat(custom_mode: u32) -> Vec<u8> {
+        fixture(&common::MavMessage::HEARTBEAT(common::HEARTBEAT_DATA {
+            custom_mode,
+            mavtype: common::MavType::MAV_TYPE_QUADROTOR,
+            autopilot: common::MavAutopilot::MAV_AUTOPILOT_PX4,
             base_mode: common::MavModeFlag::MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
             system_status: common::MavState::MAV_STATE_STANDBY,
             mavlink_version: 3,
@@ -886,6 +1001,18 @@ mod tests {
         signed_fixture(&message)
     }
 
+    fn signed_px4_heartbeat(custom_mode: u32) -> Vec<u8> {
+        let message = common::MavMessage::HEARTBEAT(common::HEARTBEAT_DATA {
+            custom_mode,
+            mavtype: common::MavType::MAV_TYPE_QUADROTOR,
+            autopilot: common::MavAutopilot::MAV_AUTOPILOT_PX4,
+            base_mode: common::MavModeFlag::MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            system_status: common::MavState::MAV_STATE_STANDBY,
+            mavlink_version: 3,
+        });
+        signed_fixture(&message)
+    }
+
     fn tampered_signature(mut packet: Vec<u8>) -> Vec<u8> {
         let last = packet.last_mut().expect("signed fixture has signature");
         *last ^= 0x01;
@@ -910,6 +1037,7 @@ mod tests {
         SecurityPolicy {
             certified_ips: vec!["127.0.0.2".parse().expect("valid IP")],
             audit_only: false,
+            shadow_enforce: false,
             block_arm_in_auto_mode: true,
             block_critical_when_mode_unknown: true,
         }
@@ -919,6 +1047,7 @@ mod tests {
         SecurityPolicy {
             certified_ips: vec!["127.0.0.1".parse().expect("valid IP")],
             audit_only: false,
+            shadow_enforce: false,
             block_arm_in_auto_mode: true,
             block_critical_when_mode_unknown: true,
         }
@@ -956,6 +1085,133 @@ mod tests {
 
         let _ = shutdown_tx.send(());
         task.await.expect("task joins").expect("gateway stops");
+    }
+
+    #[tokio::test]
+    async fn forwards_px4_vehicle_heartbeat_to_gcs_without_modifying_bytes() {
+        let gcs_receiver = UdpSocket::bind("127.0.0.1:0").await.expect("bind GCS");
+        let vehicle_receiver = UdpSocket::bind("127.0.0.1:0").await.expect("bind vehicle");
+        let gateway = UdpGateway::bind(test_config(
+            gcs_receiver.local_addr().expect("GCS addr"),
+            vehicle_receiver.local_addr().expect("vehicle addr"),
+        ))
+        .await
+        .expect("gateway binds");
+        let vehicle_gateway_addr = gateway.vehicle_listen_addr().expect("vehicle listen addr");
+        let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(gateway.run_until_shutdown(async {
+            let _ = shutdown_rx.await;
+            Ok(())
+        }));
+
+        let sitl = UdpSocket::bind("127.0.0.1:0").await.expect("bind PX4 SITL");
+        let packet = px4_heartbeat(4);
+        sitl.send_to(&packet, vehicle_gateway_addr)
+            .await
+            .expect("send PX4 heartbeat");
+
+        let mut buffer = vec![0_u8; 2048];
+        let (len, _) = timeout(Duration::from_secs(1), gcs_receiver.recv_from(&mut buffer))
+            .await
+            .expect("GCS receives PX4 packet")
+            .expect("recv succeeds");
+        assert_eq!(&buffer[..len], packet.as_slice());
+
+        let _ = shutdown_tx.send(());
+        task.await.expect("task joins").expect("gateway stops");
+    }
+
+    #[tokio::test]
+    async fn px4_heartbeat_keeps_mode_unknown_and_blocks_critical_command() {
+        let flight_state = Mutex::new(FlightState::default());
+        let counters = Mutex::new(GatewayCounters::default());
+        let policy = test_policy();
+        let source_ip = "127.0.0.1".parse().expect("valid IP");
+        let signing_validator = no_signing_validator();
+
+        let heartbeat_outcome = process_datagram(
+            UdpFlow::VehicleToGcs,
+            source_ip,
+            &px4_heartbeat(4),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Observe,
+                validator: signing_validator.as_deref(),
+            },
+        )
+        .await;
+        assert_eq!(
+            heartbeat_outcome,
+            DatagramOutcome::Forward {
+                target: ForwardTarget::Gcs
+            }
+        );
+        assert_eq!(
+            flight_state
+                .lock()
+                .await
+                .current_mode()
+                .expect("PX4 heartbeat sets state")
+                .classification,
+            FlightModeClassification::Unknown
+        );
+
+        let command_outcome = process_datagram(
+            UdpFlow::GcsToVehicle,
+            source_ip,
+            &arm_command(),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Observe,
+                validator: signing_validator.as_deref(),
+            },
+        )
+        .await;
+
+        assert_eq!(command_outcome, DatagramOutcome::Blocked);
+        let counters = *counters.lock().await;
+        assert_eq!(counters.commands_critical_observed_total, 1);
+        assert_eq!(counters.packets_blocked_total, 1);
+        assert_eq!(counters.packets_forwarded_total, 0);
+    }
+
+    #[tokio::test]
+    async fn px4_signed_heartbeat_is_observed_with_existing_signing_rules() {
+        let flight_state = Mutex::new(FlightState::default());
+        let counters = Mutex::new(GatewayCounters::default());
+        let policy = test_policy();
+        let source_ip = "127.0.0.1".parse().expect("valid IP");
+        let signing_validator = no_signing_validator();
+
+        let outcome = process_datagram(
+            UdpFlow::VehicleToGcs,
+            source_ip,
+            &signed_px4_heartbeat(4),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Observe,
+                validator: signing_validator.as_deref(),
+            },
+        )
+        .await;
+
+        assert_eq!(
+            outcome,
+            DatagramOutcome::Forward {
+                target: ForwardTarget::Gcs
+            }
+        );
+        let counters = *counters.lock().await;
+        assert_eq!(counters.packets_signed_observed_total, 1);
+        assert_eq!(counters.packets_signed_valid_total, 0);
+        assert_eq!(counters.packets_signed_invalid_total, 0);
+        assert_eq!(counters.packets_blocked_total, 0);
     }
 
     #[tokio::test]
@@ -1694,6 +1950,168 @@ mod tests {
         assert_eq!(counters.packets_unsigned_rejected_total, 0);
         assert_eq!(counters.packets_signed_observed_total, 1);
         assert_eq!(counters.packets_signed_invalid_total, 1);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn shadow_enforce_reports_policy_would_block_without_blocking() {
+        let output = StdArc::new(StdMutex::new(Vec::new()));
+        let subscriber = tracing_subscriber::fmt()
+            .with_ansi(false)
+            .with_max_level(tracing::Level::TRACE)
+            .without_time()
+            .with_writer(CapturedWriter::new(StdArc::clone(&output)))
+            .finish();
+        let guard = tracing::subscriber::set_default(subscriber);
+        let flight_state = Mutex::new(FlightState::default());
+        let counters = Mutex::new(GatewayCounters::default());
+        let mut policy = test_policy();
+        policy.audit_only = true;
+        policy.shadow_enforce = true;
+        let source_ip = "127.0.0.1".parse().expect("valid IP");
+        let signing_validator = no_signing_validator();
+
+        let heartbeat_outcome = process_datagram(
+            UdpFlow::VehicleToGcs,
+            source_ip,
+            &heartbeat(3),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Observe,
+                validator: signing_validator.as_deref(),
+            },
+        )
+        .await;
+        assert_eq!(
+            heartbeat_outcome,
+            DatagramOutcome::Forward {
+                target: ForwardTarget::Gcs
+            }
+        );
+
+        let command_outcome = process_datagram(
+            UdpFlow::GcsToVehicle,
+            source_ip,
+            &arm_command(),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Observe,
+                validator: signing_validator.as_deref(),
+            },
+        )
+        .await;
+        drop(guard);
+
+        assert_eq!(
+            command_outcome,
+            DatagramOutcome::Forward {
+                target: ForwardTarget::Vehicle
+            }
+        );
+        let counters = *counters.lock().await;
+        assert_eq!(counters.packets_blocked_total, 0);
+        assert_eq!(counters.shadow_policy_would_block_total, 1);
+        assert_eq!(counters.shadow_signing_would_reject_total, 1);
+        assert_eq!(counters.shadow_unsigned_critical_total, 1);
+
+        let output = String::from_utf8(output.lock().expect("log buffer lock").clone())
+            .expect("logs are UTF-8");
+        assert!(output.contains("security.shadow_would_block"));
+        assert!(output.contains("signing.shadow_would_reject"));
+        assert!(!output.contains("payload"));
+        assert!(!output.contains("1021324354657687"));
+    }
+
+    #[tokio::test]
+    async fn shadow_enforce_reports_unsigned_critical_without_rejecting_packet() {
+        let flight_state = Mutex::new(FlightState::default());
+        let counters = Mutex::new(GatewayCounters::default());
+        let mut policy = certified_loopback_policy();
+        policy.shadow_enforce = true;
+        let source_ip = "127.0.0.1".parse().expect("valid IP");
+        let signing_validator = no_signing_validator();
+
+        let heartbeat_outcome = process_datagram(
+            UdpFlow::VehicleToGcs,
+            source_ip,
+            &heartbeat(0),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Observe,
+                validator: signing_validator.as_deref(),
+            },
+        )
+        .await;
+        assert_eq!(
+            heartbeat_outcome,
+            DatagramOutcome::Forward {
+                target: ForwardTarget::Gcs
+            }
+        );
+
+        let command_outcome = process_datagram(
+            UdpFlow::GcsToVehicle,
+            source_ip,
+            &arm_command(),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Observe,
+                validator: signing_validator.as_deref(),
+            },
+        )
+        .await;
+
+        assert_eq!(
+            command_outcome,
+            DatagramOutcome::Forward {
+                target: ForwardTarget::Vehicle
+            }
+        );
+        let counters = *counters.lock().await;
+        assert_eq!(counters.packets_blocked_total, 0);
+        assert_eq!(counters.packets_unsigned_rejected_total, 0);
+        assert_eq!(counters.shadow_signing_would_reject_total, 1);
+        assert_eq!(counters.shadow_unsigned_critical_total, 1);
+        assert_eq!(counters.shadow_policy_would_block_total, 0);
+    }
+
+    #[tokio::test]
+    async fn shadow_enforce_does_not_degrade_real_signing_enforce_block() {
+        let flight_state = Mutex::new(FlightState::default());
+        let counters = Mutex::new(GatewayCounters::default());
+        let mut policy = certified_loopback_policy();
+        policy.audit_only = true;
+        policy.shadow_enforce = true;
+        let source_ip = "127.0.0.1".parse().expect("valid IP");
+        let signing_validator = SigningValidator::new(crate::signing::INSECURE_TEST_SIGNING_KEY, 7);
+
+        let outcome = process_datagram(
+            UdpFlow::GcsToVehicle,
+            source_ip,
+            &arm_command(),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Enforce,
+                validator: Some(&signing_validator),
+            },
+        )
+        .await;
+
+        assert_eq!(outcome, DatagramOutcome::Blocked);
+        let counters = *counters.lock().await;
+        assert_eq!(counters.packets_blocked_total, 1);
+        assert_eq!(counters.packets_unsigned_rejected_total, 1);
+        assert_eq!(counters.shadow_signing_would_reject_total, 0);
+        assert_eq!(counters.policy_latency_samples, 0);
     }
 
     #[tokio::test]

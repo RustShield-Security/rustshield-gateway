@@ -292,6 +292,17 @@ mod tests {
         }))
     }
 
+    fn px4_heartbeat(custom_mode: u32) -> Vec<u8> {
+        fixture(&common::MavMessage::HEARTBEAT(common::HEARTBEAT_DATA {
+            custom_mode,
+            mavtype: common::MavType::MAV_TYPE_QUADROTOR,
+            autopilot: common::MavAutopilot::MAV_AUTOPILOT_PX4,
+            base_mode: common::MavModeFlag::MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
+            system_status: common::MavState::MAV_STATE_STANDBY,
+            mavlink_version: 3,
+        }))
+    }
+
     fn command_long(command: common::MavCmd, param1: f32, param2: f32) -> Vec<u8> {
         fixture(&common::MavMessage::COMMAND_LONG(
             common::COMMAND_LONG_DATA {
@@ -385,6 +396,26 @@ mod tests {
 
         assert_eq!(event.classification, FlightModeClassification::NotAutomatic);
         assert_eq!(event.mode_name, Some("Loiter"));
+    }
+
+    #[test]
+    fn parses_px4_heartbeat_as_limited_unknown_mode() {
+        let packet = decode_datagram(&px4_heartbeat(4)).expect("valid PX4 heartbeat");
+
+        let MavlinkSemantic::Heartbeat(observation) = packet.semantic else {
+            panic!("expected heartbeat");
+        };
+        assert_eq!(observation.autopilot, Autopilot::Px4);
+        assert_eq!(observation.vehicle_family, VehicleFamily::ArduCopter);
+        assert_eq!(observation.custom_mode, Some(4));
+        assert_eq!(observation.classify(), FlightModeClassification::Unknown);
+
+        let mut state = FlightState::default();
+        let event = state
+            .update_heartbeat(observation)
+            .expect("first PX4 heartbeat changes state");
+        assert_eq!(event.mode_name, None);
+        assert_eq!(event.classification, FlightModeClassification::Unknown);
     }
 
     #[test]

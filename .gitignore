@@ -3,3 +3,5 @@
 Cargo.lock.bak
 *.log
 *.tmp
+/implementacion/evidencias/
+/public-demo-*/

@@ -234,6 +234,33 @@ mod tests {
     }
 
     #[test]
+    fn mode_px4_u_001_px4_modes_are_unknown_for_limited_scope() {
+        let classification = classify_mode(Autopilot::Px4, VehicleFamily::ArduCopter, Some(4));
+
+        assert_eq!(classification, FlightModeClassification::Unknown);
+    }
+
+    #[test]
+    fn mode_px4_sitl_001_emits_mode_changed_event_without_mode_name() {
+        let mut state = FlightState::default();
+        let event = state
+            .update_heartbeat(HeartbeatObservation {
+                autopilot: Autopilot::Px4,
+                vehicle_family: VehicleFamily::ArduCopter,
+                base_mode: 0,
+                custom_mode: Some(4),
+                source_system: 1,
+                source_component: 1,
+            })
+            .expect("first PX4 heartbeat changes state");
+
+        assert_eq!(event.audit_event, "flight_state.mode_changed");
+        assert_eq!(event.autopilot, Autopilot::Px4);
+        assert_eq!(event.classification, FlightModeClassification::Unknown);
+        assert_eq!(event.mode_name, None);
+    }
+
+    #[test]
     fn mode_ap_sitl_001_emits_mode_changed_event_for_auto() {
         let mut state = FlightState::default();
         let event = state

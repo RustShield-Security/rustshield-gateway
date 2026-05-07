@@ -5,14 +5,16 @@
 - MAVLink UDP/SITL gateway foundations.
 - Semantic policy engine for critical/high-risk command classes.
 - MAVLink signing observability and laboratory validation paths.
+- Shadow enforcement for non-blocking policy impact assessment.
 - Read-only observability primitives.
 - Assurance-oriented documentation.
+- Public evidence summaries and loopback-only demo.
 
 ## Next Public-Appropriate Work
 
 - Keep CI green and publish evidence summaries.
 - Add sanitized examples of policy decisions.
-- Add clearer public demo instructions for SITL-only workflows.
+- Improve public demo reproducibility.
 - Improve documentation for safe integration review.
 
 ## Private / Controlled-Lab Work
@@ -29,3 +31,5 @@
 - Flight readiness.
 - Complete autopilot coverage.
 - Real hardware safety without a controlled lab plan.
+- Production Serial/radio support.
+- Complete PX4 mode-policy coverage.

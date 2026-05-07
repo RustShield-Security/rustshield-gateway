@@ -29,6 +29,8 @@ pub enum ConfigError {
 pub struct AppConfig {
     pub transport: TransportConfig,
     pub udp: UdpConfig,
+    #[serde(default)]
+    pub serial: SerialConfig,
     pub security: SecurityConfig,
     #[serde(default)]
     pub signing: GatewaySigningConfig,
@@ -59,6 +61,10 @@ impl AppConfig {
                 "udp.listen_gcs and udp.listen_vehicle must use different socket addresses"
                     .to_string(),
             ));
+        }
+
+        if self.transport.mode == TransportMode::Serial {
+            self.serial.validate()?;
         }
 
         if self.udp.read_timeout_ms == 0 || self.udp.read_timeout_ms > 10_000 {
@@ -282,6 +288,66 @@ impl Default for TransportConfig {
 #[serde(rename_all = "snake_case")]
 pub enum TransportMode {
     Udp,
+    Serial,
+}
+
+impl TransportMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Udp => "udp",
+            Self::Serial => "serial",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct SerialConfig {
+    pub port: PathBuf,
+    pub baud_rate: u32,
+    pub read_timeout_ms: u64,
+    pub max_frame_size: usize,
+}
+
+impl SerialConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        if self.port.as_os_str().is_empty() {
+            return Err(ConfigError::Validation(
+                "serial.port is required when transport.mode=serial".to_string(),
+            ));
+        }
+
+        if self.baud_rate == 0 || self.baud_rate > 4_000_000 {
+            return Err(ConfigError::Validation(
+                "serial.baud_rate must be between 1 and 4000000".to_string(),
+            ));
+        }
+
+        if self.read_timeout_ms == 0 || self.read_timeout_ms > 10_000 {
+            return Err(ConfigError::Validation(
+                "serial.read_timeout_ms must be between 1 and 10000 milliseconds".to_string(),
+            ));
+        }
+
+        if self.max_frame_size < 8 || self.max_frame_size > 4096 {
+            return Err(ConfigError::Validation(
+                "serial.max_frame_size must be between 8 and 4096 bytes".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+impl Default for SerialConfig {
+    fn default() -> Self {
+        Self {
+            port: PathBuf::new(),
+            baud_rate: 57_600,
+            read_timeout_ms: 100,
+            max_frame_size: 280,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -314,6 +380,8 @@ pub struct SecurityConfig {
     pub certified_ips: Vec<IpAddr>,
     pub unknown_mode_policy: UnknownModePolicy,
     pub audit_only: bool,
+    #[serde(default)]
+    pub shadow_enforce: bool,
     pub block_arm_in_auto_mode: bool,
 }
 
@@ -323,6 +391,7 @@ impl Default for SecurityConfig {
             certified_ips: vec!["127.0.0.1".parse().expect("valid default IP")],
             unknown_mode_policy: UnknownModePolicy::Block,
             audit_only: false,
+            shadow_enforce: false,
             block_arm_in_auto_mode: true,
         }
     }
@@ -396,6 +465,7 @@ mod tests {
             certified_ips = ["127.0.0.1"]
             unknown_mode_policy = "block"
             audit_only = false
+            shadow_enforce = false
             block_arm_in_auto_mode = true
 
             [signing]
@@ -422,10 +492,81 @@ mod tests {
             UnknownModePolicy::Block
         );
         assert_eq!(config.signing.policy, SigningPolicy::Observe);
+        assert!(!config.security.shadow_enforce);
         assert_eq!(
             config.metrics.readonly_bind,
             Some("127.0.0.1:14600".parse().expect("valid socket"))
         );
+    }
+
+    #[test]
+    fn accepts_shadow_enforce_flag() {
+        let mut config = AppConfig::default();
+        config.security.shadow_enforce = true;
+
+        config.validate().expect("shadow enforce is accepted");
+        assert!(config.security.shadow_enforce);
+    }
+
+    #[test]
+    fn accepts_serial_transport_config_for_virtual_lab() {
+        let input = r#"
+            [transport]
+            mode = "serial"
+
+            [udp]
+            listen_gcs = "0.0.0.0:14551"
+            listen_vehicle = "0.0.0.0:14550"
+            vehicle_addr = "127.0.0.1:14540"
+            gcs_addr = "127.0.0.1:14552"
+            read_timeout_ms = 100
+            max_datagram_size = 2048
+
+            [serial]
+            port = "/dev/pts/99"
+            baud_rate = 57600
+            read_timeout_ms = 100
+            max_frame_size = 280
+
+            [security]
+            certified_ips = ["127.0.0.1"]
+            unknown_mode_policy = "block"
+            audit_only = false
+            shadow_enforce = false
+            block_arm_in_auto_mode = true
+
+            [signing]
+            policy = "observe"
+            link_id = 0
+
+            [crypto]
+            enabled = false
+
+            [logging]
+            level = "info"
+            payload_logging = false
+
+            [metrics]
+            enabled = true
+        "#;
+
+        let config = AppConfig::load_from_str(input).expect("serial config is accepted");
+
+        assert_eq!(config.transport.mode, TransportMode::Serial);
+        assert_eq!(config.serial.baud_rate, 57_600);
+        assert_eq!(config.serial.max_frame_size, 280);
+    }
+
+    #[test]
+    fn rejects_serial_transport_without_port() {
+        let mut config = AppConfig::default();
+        config.transport.mode = TransportMode::Serial;
+
+        let err = config
+            .validate()
+            .expect_err("serial mode requires explicit port");
+
+        assert!(err.to_string().contains("serial.port"));
     }
 
     #[test]
@@ -455,6 +596,7 @@ mod tests {
             certified_ips = ["127.0.0.1"]
             unknown_mode_policy = "block"
             audit_only = false
+            shadow_enforce = false
             block_arm_in_auto_mode = true
 
             [signing]

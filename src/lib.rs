@@ -7,5 +7,6 @@ pub mod mavlink_codec;
 pub mod metrics;
 pub mod observability;
 pub mod security_filter;
+pub mod serial_transport;
 pub mod signing;
 pub mod transport;

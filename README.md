@@ -1,86 +1,50 @@
-<div align="center">
-  <img src="assets/logo.png" alt="RustShield Gateway logo" width="420">
+# RustShield Gateway
 
-  # RustShield Gateway
+Security-oriented MAVLink gateway for controlled SITL/laboratory validation.
 
-  **MAVLink security gateway research prototype for SITL and controlled laboratory validation.**
+RustShield Gateway is a Rust-based MAVLink security gateway technical preview
+for controlled SITL/laboratory validation. It focuses on semantic command
+policy, signing-aware audit/enforce paths, shadow enforcement, read-only
+observability and evidence-oriented engineering.
 
-  [![Rust](https://img.shields.io/badge/language-Rust-orange.svg?logo=rust)](https://www.rust-lang.org/)
-  [![Architecture](https://img.shields.io/badge/architecture-arc42--aligned-blue)](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
-  [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-lightgrey)](#license)
-</div>
+## What It Does
 
-## What This Is
+RustShield evaluates selected high-risk MAVLink traffic using:
 
-RustShield Gateway is a Rust-based security gateway for MAVLink-based UAV
-systems. It demonstrates semantic command filtering, signing observability,
-policy enforcement experiments, structured observability and assurance-oriented
-documentation.
-
-This public repository is a **technical preview and showcase**. It is intended
-for review, research discussion and partnership conversations. The private
-laboratory branch contains additional validation history, internal evidence and
-pre-hardware work.
+- semantic command policy for critical/high-risk MAVLink commands;
+- conservative flight-state context from `HEARTBEAT`;
+- MAVLink signing observe/audit/enforce laboratory paths;
+- shadow enforcement for non-blocking impact assessment;
+- read-only logs and metrics for evidence capture;
+- reproducible local checks and public evidence summaries.
 
 ## Current Public Scope
 
-Validated public-preview scope:
+- MAVLink UDP/SITL gateway.
+- ArduPilot Copter SITL as the primary documented workflow.
+- QGroundControl-oriented laboratory topology.
+- Critical/high-risk MAVLink command policy.
+- MAVLink signing observe/audit/enforce laboratory validation paths.
+- Shadow enforcement counters and events.
+- Read-only `/healthz` and `/metrics` observability.
+- Public evidence summaries and reproducibility checks.
+- Limited PX4 heartbeat fixtures and smoke tests, with PX4 modes treated
+  conservatively as `Unknown`.
+- Serial transport validated only against virtual PTY devices.
 
-- MAVLink v1/v2 parsing using the `common` dialect;
-- UDP gateway path for SITL-style deployments;
-- ArduPilot Copter SITL as the primary documented target;
-- stateful `HEARTBEAT` interpretation for the documented ArduPilot Copter MVP;
-- semantic policy checks for critical/high-risk MAVLink commands;
-- MAVLink signing observability and laboratory enforcement experiments;
-- structured logs and read-only metrics primitives;
-- fuzzing, dependency auditing and assurance-oriented documentation.
+## Not Claimed
 
-Public-preview limitations:
+- No real UAV flight readiness.
+- No certification.
+- No hardware/radio validation.
+- No production Serial/radio support.
+- No complete PX4 mode-policy support.
+- No complete MAVLink security coverage.
+- No guaranteed end-to-end real-time performance.
+- No replacement for platform hardening, key management or network
+  segmentation.
 
-- not certified for flight operations;
-- not validated for real UAV operation in this public preview;
-- not a complete PX4 mode-policy implementation;
-- not a complete hardware/radio/Serial product;
-- not a replacement for proper key management, network segmentation or platform
-  hardening;
-- not a guarantee of end-to-end real-time performance.
-
-## Why It Exists
-
-MAVLink is efficient and widely used, but production deployments need explicit
-security controls around command authorization, signing, observability and
-operational evidence. RustShield explores an external gateway approach that can
-sit between a ground station and a vehicle or simulator:
-
-```text
-Ground Control Station <-> RustShield Gateway <-> Autopilot / SITL
-```
-
-The key idea is semantic filtering: a gateway should not only parse packets, but
-also evaluate whether a command is coherent with the current flight context and
-security policy.
-
-## Core Capabilities
-
-| Area | Public Preview Capability |
-|---|---|
-| MAVLink parsing | Parses MAVLink v1/v2 frames and extracts routing/signing metadata. |
-| Flight state | Maintains a conservative state from `HEARTBEAT`. |
-| Policy engine | Blocks or audits critical/high-risk command classes under documented conditions. |
-| Signing | Observes MAVLink 2 signing and supports laboratory validation/enforcement paths. |
-| Observability | Emits structured logs and read-only metrics suitable for evidence capture. |
-| Assurance docs | Includes ADRs, arc42 architecture, threat model, traceability and risk register. |
-
-## Safety Notice
-
-This repository is for documentation, simulation and controlled laboratory work.
-Do not use it to arm, disarm, take off, land, change mode, upload missions,
-mutate parameters or send RC override commands to real UAV hardware unless a
-separate safety procedure, test plan and explicit authorization exist.
-
-All MAVLink input must be treated as untrusted.
-
-## Quick Start
+## Quick Checks
 
 ```bash
 cargo fmt --check
@@ -88,38 +52,58 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test
 ```
 
-Example SITL-oriented scripts are included for public review. They are not a
-flight-operation procedure.
+Supply-chain checks used by the project:
 
 ```bash
-./scripts/run-sitl-gateway.sh
-./scripts/send-sitl-arm-command.sh 127.0.0.1:14551
+cargo audit
+cargo deny check
 ```
 
-## Documentation Map
+## Public Demo
 
-- [Architecture arc42](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
-- [Threat Model](definicion/modelo-amenazas-mavlink-rust-shield-gateway.md)
-- [Security Policies](definicion/especificacion-politicas-seguridad.md)
-- [Observability Spec](definicion/especificacion-observabilidad.md)
-- [Compatibility Matrix](definicion/matriz-compatibilidad-gcs-autopilotos.md)
-- [Risk Register](definicion/registro-riesgos.md)
+The public demo is loopback-only and does not require real hardware, radios,
+QGroundControl or an autopilot.
+
+```bash
+./scripts/run-public-demo.sh
+```
+
+See [docs/demo.md](docs/demo.md).
+
+## Evidence
+
+See [docs/evidence/latest/](docs/evidence/latest/) for public, sanitized
+evidence summaries.
+
+The public evidence pack is a summary. It is not a certification package and it
+does not include private laboratory history, raw internal logs or customer
+material.
+
+## Commercial / Lab Pilots
+
+See [COMMERCIAL.md](COMMERCIAL.md) for assessment, laboratory pilot and partner
+integration options.
+
+## Documentation
+
 - [Public Scope](docs/public-scope.md)
+- [Public Claims](docs/claims.md)
+- [Limitations](docs/limitations.md)
+- [Responsible Use](docs/responsible-use.md)
+- [Demo](docs/demo.md)
 - [Evidence Summary](docs/evidence-summary.md)
 - [Public Roadmap](docs/public-roadmap.md)
-
-## Commercial / Partnership Use
-
-The public repository is intentionally limited. For partnership, integration or
-acquisition discussions, the useful artifact is not just the code: it is the
-combination of gateway implementation, security policy model, evidence workflow
-and controlled laboratory validation plan.
-
-See [Product Brief](docs/product-brief.md).
+- [Product Brief](docs/product-brief.md)
+- [Assessment Offer](docs/assessment-offer.md)
+- [Architecture Summary](docs/architecture-summary.md)
+- [Threat Model Summary](docs/threat-model-summary.md)
+- [Policy Catalog Summary](docs/policy-catalog-summary.md)
+- [Signing Lab Summary](docs/signing-lab-summary.md)
+- [Observability Summary](docs/observability-summary.md)
 
 ## Security
 
-Please see [SECURITY.md](SECURITY.md) before reporting vulnerabilities or using
+Please read [SECURITY.md](SECURITY.md) before reporting vulnerabilities or using
 the project in a lab.
 
 ## License

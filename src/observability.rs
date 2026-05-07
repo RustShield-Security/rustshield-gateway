@@ -173,6 +173,31 @@ pub fn render_prometheus_metrics(counters: &GatewayCounters, uptime_seconds: u64
     );
     push_metric(
         &mut output,
+        "shadow_policy_would_block_total",
+        counters.shadow_policy_would_block_total,
+    );
+    push_metric(
+        &mut output,
+        "shadow_signing_would_reject_total",
+        counters.shadow_signing_would_reject_total,
+    );
+    push_metric(
+        &mut output,
+        "shadow_unsigned_critical_total",
+        counters.shadow_unsigned_critical_total,
+    );
+    push_metric(
+        &mut output,
+        "shadow_invalid_signature_total",
+        counters.shadow_invalid_signature_total,
+    );
+    push_metric(
+        &mut output,
+        "shadow_replay_total",
+        counters.shadow_replay_total,
+    );
+    push_metric(
+        &mut output,
         "commands_critical_observed_total",
         counters.commands_critical_observed_total,
     );
@@ -267,6 +292,8 @@ mod tests {
             packets_signed_valid_total: 2,
             signing_replay_rejected_total: 1,
             setup_signing_observed_total: 1,
+            shadow_policy_would_block_total: 1,
+            shadow_signing_would_reject_total: 2,
             processing_latency_max_us: 99,
             ..GatewayCounters::default()
         };
@@ -278,8 +305,12 @@ mod tests {
         assert!(output.contains("packets_signed_valid_total 2\n"));
         assert!(output.contains("signing_replay_rejected_total 1\n"));
         assert!(output.contains("setup_signing_observed_total 1\n"));
+        assert!(output.contains("shadow_policy_would_block_total 1\n"));
+        assert!(output.contains("shadow_signing_would_reject_total 2\n"));
         assert!(!output.contains("payload"));
-        assert!(!output.contains("signature"));
+        assert!(!output.contains("signature="));
+        assert!(!output.contains("signature_value"));
+        assert!(!output.contains("signature_bytes"));
         assert!(!output.contains("key"));
         assert!(!output.contains("SETUP_SIGNING_DATA"));
     }

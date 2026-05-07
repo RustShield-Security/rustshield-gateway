@@ -10,6 +10,11 @@ pub struct GatewayCounters {
     pub packets_unsigned_rejected_total: u64,
     pub signing_replay_rejected_total: u64,
     pub setup_signing_observed_total: u64,
+    pub shadow_policy_would_block_total: u64,
+    pub shadow_signing_would_reject_total: u64,
+    pub shadow_unsigned_critical_total: u64,
+    pub shadow_invalid_signature_total: u64,
+    pub shadow_replay_total: u64,
     pub commands_critical_observed_total: u64,
     pub processing_latency_samples: u64,
     pub processing_latency_total_us: u64,
@@ -35,6 +40,11 @@ pub enum MetricName {
     PacketsUnsignedRejectedTotal,
     SigningReplayRejectedTotal,
     SetupSigningObservedTotal,
+    ShadowPolicyWouldBlockTotal,
+    ShadowSigningWouldRejectTotal,
+    ShadowUnsignedCriticalTotal,
+    ShadowInvalidSignatureTotal,
+    ShadowReplayTotal,
     CommandsCriticalObservedTotal,
     ProcessingLatencyUs,
     ParseLatencyUs,
@@ -55,6 +65,11 @@ impl MetricName {
             Self::PacketsUnsignedRejectedTotal => "packets_unsigned_rejected_total",
             Self::SigningReplayRejectedTotal => "signing_replay_rejected_total",
             Self::SetupSigningObservedTotal => "setup_signing_observed_total",
+            Self::ShadowPolicyWouldBlockTotal => "shadow_policy_would_block_total",
+            Self::ShadowSigningWouldRejectTotal => "shadow_signing_would_reject_total",
+            Self::ShadowUnsignedCriticalTotal => "shadow_unsigned_critical_total",
+            Self::ShadowInvalidSignatureTotal => "shadow_invalid_signature_total",
+            Self::ShadowReplayTotal => "shadow_replay_total",
             Self::CommandsCriticalObservedTotal => "commands_critical_observed_total",
             Self::ProcessingLatencyUs => "processing_latency_us",
             Self::ParseLatencyUs => "parse_latency_us",
@@ -103,6 +118,26 @@ impl GatewayCounters {
 
     pub fn record_setup_signing_observed(&mut self) {
         self.setup_signing_observed_total += 1;
+    }
+
+    pub fn record_shadow_policy_would_block(&mut self) {
+        self.shadow_policy_would_block_total += 1;
+    }
+
+    pub fn record_shadow_signing_would_reject(&mut self) {
+        self.shadow_signing_would_reject_total += 1;
+    }
+
+    pub fn record_shadow_unsigned_critical(&mut self) {
+        self.shadow_unsigned_critical_total += 1;
+    }
+
+    pub fn record_shadow_invalid_signature(&mut self) {
+        self.shadow_invalid_signature_total += 1;
+    }
+
+    pub fn record_shadow_replay(&mut self) {
+        self.shadow_replay_total += 1;
     }
 
     pub fn record_critical_command_observed(&mut self) {

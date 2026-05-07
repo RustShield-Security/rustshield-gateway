@@ -1,0 +1,20 @@
+[package]
+name = "mavlink-rust-shield-gateway-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+mavlink = { version = "0.17.1", default-features = false, features = ["common", "std"] }
+mavlink-rust-shield-gateway = { path = ".." }
+
+[[bin]]
+name = "fuzz_mavlink_frame"
+path = "fuzz_targets/fuzz_mavlink_frame.rs"
+test = false
+doc = false
+bench = false

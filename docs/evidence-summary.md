@@ -8,10 +8,12 @@ It is not a certification package.
 - Rust formatting, linting and test execution.
 - Dependency and license checks using `cargo audit` and `cargo deny`.
 - MAVLink parser fixtures and policy tests.
-- Simulation-oriented SITL procedures.
+- Loopback-only public demo outputs.
+- Simulation-oriented SITL summaries.
 - Architecture documentation, ADRs, traceability and risk register.
 - Public risk statements describing unresolved hardware, PX4, signing and
   operational limitations.
+- Sanitized evidence summaries under `docs/evidence/latest/`.
 
 ## Evidence Kept Private Unless Cleared
 
@@ -30,6 +32,20 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test
 cargo audit
 cargo deny check
+```
+
+## Public Evidence Pack Layout
+
+```text
+docs/evidence/latest/
+  README.md
+  checks-summary.md
+  sitl-summary.md
+  signing-summary.md
+  fuzz-summary.md
+  latency-summary.md
+  artifact-hashes.md
+  claims-and-limitations.md
 ```
 
 ## Interpretation

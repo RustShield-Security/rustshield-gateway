@@ -10,8 +10,9 @@ commercial planning detail.
 - MAVLink parsing and policy engine examples.
 - Documentation for architecture, threat modeling, risk tracking and policy
   design.
-- SITL-oriented scripts for review and controlled simulation use.
+- loopback-only public demo and SITL-oriented code paths for review.
 - Public-facing product and roadmap summaries.
+- Public evidence summaries.
 
 ## Not Included
 
@@ -21,6 +22,7 @@ commercial planning detail.
 - hardware-lab evidence not cleared for publication;
 - credentials, keys, signing material or environment-specific paths;
 - any procedure that authorizes real UAV flight operations.
+- complete private product roadmap or internal implementation memory.
 
 ## Claim Boundary
 

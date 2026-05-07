@@ -33,6 +33,7 @@ pub enum Direction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportKind {
     Udp,
+    Serial,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -213,6 +214,7 @@ impl RiskCategory {
 pub struct SecurityPolicy {
     pub certified_ips: Vec<IpAddr>,
     pub audit_only: bool,
+    pub shadow_enforce: bool,
     pub block_arm_in_auto_mode: bool,
     pub block_critical_when_mode_unknown: bool,
 }
@@ -222,6 +224,7 @@ impl SecurityPolicy {
         Self {
             certified_ips,
             audit_only: false,
+            shadow_enforce: false,
             block_arm_in_auto_mode: true,
             block_critical_when_mode_unknown: true,
         }
@@ -306,7 +309,7 @@ pub fn evaluate_command(
     context: &MessageContext,
     command: &CommandMessage,
 ) -> PolicyDecision {
-    if context.direction != Direction::GcsToVehicle || context.transport != TransportKind::Udp {
+    if context.direction != Direction::GcsToVehicle {
         return PolicyDecision::Allow;
     }
 
@@ -392,6 +395,15 @@ mod tests {
             direction: Direction::GcsToVehicle,
             transport: TransportKind::Udp,
             source_ip: Some(source_ip.parse().expect("valid IP")),
+            flight_mode,
+        }
+    }
+
+    fn serial_context(flight_mode: FlightModeClassification) -> MessageContext {
+        MessageContext {
+            direction: Direction::GcsToVehicle,
+            transport: TransportKind::Serial,
+            source_ip: None,
             flight_mode,
         }
     }
@@ -789,6 +801,25 @@ mod tests {
         assert_eq!(
             decision,
             PolicyDecision::AuditOnly(BlockReason {
+                rule_id: RuleId::ArmAuto001,
+                severity: Severity::Critical,
+                param2_class: Param2Class::Normal,
+                audit_event: "security.command_blocked",
+            })
+        );
+    }
+
+    #[test]
+    fn serial_transport_applies_same_semantic_policy_without_certified_ip() {
+        let decision = evaluate_command(
+            &policy(),
+            &serial_context(FlightModeClassification::Automatic),
+            &arm_command(0.0),
+        );
+
+        assert_eq!(
+            decision,
+            PolicyDecision::Block(BlockReason {
                 rule_id: RuleId::ArmAuto001,
                 severity: Severity::Critical,
                 param2_class: Param2Class::Normal,

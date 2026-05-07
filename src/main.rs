@@ -1,5 +1,10 @@
 use clap::Parser;
-use mavlink_rust_shield_gateway::{cli::Cli, config::AppConfig, logging, transport::UdpGateway};
+use mavlink_rust_shield_gateway::{
+    cli::Cli,
+    config::{AppConfig, TransportMode},
+    logging,
+    transport::UdpGateway,
+};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -20,13 +25,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         event = "gateway.start",
         transport = ?config.transport.mode,
         audit_only = config.security.audit_only,
+        shadow_enforce = config.security.shadow_enforce,
         signing_policy = ?config.signing.policy,
         log_level,
         "gateway starting"
     );
 
-    let gateway = UdpGateway::bind(config).await?;
-    gateway.run_until_shutdown(tokio::signal::ctrl_c()).await?;
+    match config.transport.mode {
+        TransportMode::Udp => {
+            let gateway = UdpGateway::bind(config).await?;
+            gateway.run_until_shutdown(tokio::signal::ctrl_c()).await?;
+        }
+        TransportMode::Serial => {
+            return Err(
+                "transport.mode=serial is implemented as SerialTransport/PTY lab boundary; full gateway runtime is not enabled in this phase"
+                    .into(),
+            );
+        }
+    }
 
     tracing::info!(event = "gateway.shutdown", "gateway stopped");
 
