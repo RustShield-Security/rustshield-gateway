@@ -100,17 +100,14 @@ fn request_path(request: &[u8]) -> Option<&str> {
 
 fn http_response(status: &str, content_type: &str, body: &str) -> String {
     format!(
-        "HTTP/1.1 {status}\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\ncache-control: no-store\r\naccess-control-allow-origin: *\r\nconnection: close\r\n\r\n{body}",
+        "HTTP/1.1 {status}\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\ncache-control: no-store\r\nconnection: close\r\n\r\n{body}",
         body.len()
     )
 }
 
 pub fn render_health_json(counters: &GatewayCounters, uptime_seconds: u64) -> String {
-    let last_heartbeat_age = counters
-        .last_heartbeat_age_ms
-        .map_or("null".to_string(), |age| age.to_string());
     format!(
-        "{{\"status\":\"ok\",\"read_only\":true,\"uptime_seconds\":{uptime_seconds},\"packets_received_total\":{},\"packets_forwarded_total\":{},\"packets_blocked_total\":{},\"packets_parse_error_total\":{},\"last_heartbeat_age_ms\":{last_heartbeat_age}}}",
+        "{{\"status\":\"ok\",\"read_only\":true,\"uptime_seconds\":{uptime_seconds},\"packets_received_total\":{},\"packets_forwarded_total\":{},\"packets_blocked_total\":{},\"packets_parse_error_total\":{}}}",
         counters.packets_received_total,
         counters.packets_forwarded_total,
         counters.packets_blocked_total,
@@ -246,9 +243,6 @@ pub fn render_prometheus_metrics(counters: &GatewayCounters, uptime_seconds: u64
         "policy_latency_max_us",
         counters.policy_latency_max_us,
     );
-    if let Some(age) = counters.last_heartbeat_age_ms {
-        push_metric(&mut output, "last_heartbeat_age_ms", age);
-    }
     output
 }
 
@@ -271,7 +265,6 @@ mod tests {
             packets_forwarded_total: 5,
             packets_blocked_total: 1,
             packets_parse_error_total: 1,
-            last_heartbeat_age_ms: Some(250),
             ..GatewayCounters::default()
         };
 
@@ -355,10 +348,40 @@ mod tests {
         endpoint.task.abort();
 
         assert!(response.starts_with("HTTP/1.1 200 OK"));
-        assert!(response.contains("access-control-allow-origin: *"));
+        assert!(!response.contains("access-control-allow-origin"));
         assert!(response.contains("packets_received_total 9\n"));
         assert!(response.contains("packets_blocked_total 2\n"));
         assert!(!response.contains("payload"));
         assert!(!response.contains("key"));
+    }
+
+    #[tokio::test]
+    async fn returns_not_found_for_unknown_readonly_path() {
+        let counters = Arc::new(Mutex::new(GatewayCounters::default()));
+        let endpoint = spawn_readonly_endpoint(
+            "127.0.0.1:0".parse().expect("valid bind"),
+            Arc::clone(&counters),
+            Instant::now(),
+        )
+        .await
+        .expect("endpoint binds");
+
+        let mut stream = TcpStream::connect(endpoint.local_addr)
+            .await
+            .expect("endpoint accepts local connection");
+        stream
+            .write_all(b"GET /unknown HTTP/1.1\r\nhost: localhost\r\n\r\n")
+            .await
+            .expect("request writes");
+
+        let mut response = String::new();
+        stream
+            .read_to_string(&mut response)
+            .await
+            .expect("response reads");
+        endpoint.task.abort();
+
+        assert!(response.starts_with("HTTP/1.1 404 Not Found"));
+        assert!(response.contains(r#"{"status":"not_found"}"#));
     }
 }

@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::{
     flight_state::{Autopilot, HeartbeatObservation, VehicleFamily},
+    mavlink_constants::MAVLINK2_SIGNED_INCOMPAT_FLAG,
     security_filter::{
         CommandMessage, MAVLINK_MSG_ID_COMMAND_INT, MAVLINK_MSG_ID_COMMAND_LONG,
         MAVLINK_MSG_ID_MANUAL_CONTROL, MAVLINK_MSG_ID_MISSION_CLEAR_ALL,
@@ -15,8 +16,6 @@ use crate::{
         MAVLINK_MSG_ID_PARAM_SET, MAVLINK_MSG_ID_RC_CHANNELS_OVERRIDE, MAVLINK_MSG_ID_SET_MODE,
     },
 };
-
-const MAVLINK2_SIGNED_INCOMPAT_FLAG: u8 = 0x01;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodecStatus {

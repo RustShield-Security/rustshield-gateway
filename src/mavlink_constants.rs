@@ -1,0 +1,1 @@
+pub const MAVLINK2_SIGNED_INCOMPAT_FLAG: u8 = 0x01;

@@ -314,6 +314,9 @@ pub fn evaluate_command(
     }
 
     match context.flight_mode {
+        // MVP 0.1 scope: ARM-AUTO-001 only blocks arming in Automatic mode.
+        // Known non-automatic modes (e.g. Guided/RTL) are intentionally left
+        // to other explicit rules and future policy phases.
         FlightModeClassification::Automatic
             if command.is_arm_attempt()
                 && policy.block_arm_in_auto_mode
@@ -326,14 +329,12 @@ pub fn evaluate_command(
         {
             deny(policy, RuleId::CriticalUnknown001, command)
         }
-        _ if command.explicit_rule_id().is_some() && !policy.is_certified_ip(context.source_ip) => {
-            deny(
-                policy,
-                command
-                    .explicit_rule_id()
-                    .expect("checked explicit policy rule"),
-                command,
-            )
+        _ if !policy.is_certified_ip(context.source_ip) => {
+            if let Some(rule_id) = command.explicit_rule_id() {
+                deny(policy, rule_id, command)
+            } else {
+                PolicyDecision::Allow
+            }
         }
         _ => PolicyDecision::Allow,
     }
@@ -514,6 +515,17 @@ mod tests {
                 reason: "packet could not be parsed safely",
             })
         );
+    }
+
+    #[test]
+    fn arm_auto_u_007_allows_non_certified_arm_in_known_not_automatic_mode_by_mvp_design() {
+        let decision = evaluate_command(
+            &policy(),
+            &context("192.0.2.10", FlightModeClassification::NotAutomatic),
+            &arm_command(0.0),
+        );
+
+        assert_eq!(decision, PolicyDecision::Allow);
     }
 
     #[test]

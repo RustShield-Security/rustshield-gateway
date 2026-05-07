@@ -220,6 +220,22 @@ mod tests {
     }
 
     #[test]
+    fn mode_ap_u_004a_arducopter_guided_is_not_automatic_for_mvp() {
+        let classification =
+            classify_mode(Autopilot::ArduPilot, VehicleFamily::ArduCopter, Some(4));
+
+        assert_eq!(classification, FlightModeClassification::NotAutomatic);
+    }
+
+    #[test]
+    fn mode_ap_u_004b_arducopter_rtl_is_not_automatic_for_mvp() {
+        let classification =
+            classify_mode(Autopilot::ArduPilot, VehicleFamily::ArduCopter, Some(6));
+
+        assert_eq!(classification, FlightModeClassification::NotAutomatic);
+    }
+
+    #[test]
     fn mode_ap_u_005_unsupported_vehicle_is_unknown() {
         let classification = classify_mode(Autopilot::ArduPilot, VehicleFamily::ArduPlane, Some(3));
 

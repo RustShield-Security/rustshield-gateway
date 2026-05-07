@@ -274,7 +274,6 @@ async fn log_metrics_snapshot(counters: &Mutex<GatewayCounters>) {
         policy_latency_samples = counters.policy_latency_samples,
         policy_latency_total_us = counters.policy_latency_total_us,
         policy_latency_max_us = counters.policy_latency_max_us,
-        last_heartbeat_age_ms = counters.last_heartbeat_age_ms,
         "gateway metrics snapshot"
     );
 }
@@ -413,8 +412,9 @@ async fn process_datagram(
                 };
             };
 
-            if command.is_cataloged_critical_command() || command.is_cataloged_high_risk_command() {
-                counters.lock().await.record_critical_command_observed();
+            let is_critical_or_high_risk =
+                command.is_cataloged_critical_command() || command.is_cataloged_high_risk_command();
+            if is_critical_or_high_risk {
                 tracing::info!(
                     event = "security.command_observed",
                     message_id = command.message_id,
@@ -424,8 +424,7 @@ async fn process_datagram(
                 );
             }
 
-            let requires_signing =
-                command.is_cataloged_critical_command() || command.is_cataloged_high_risk_command();
+            let requires_signing = is_critical_or_high_risk;
             let signing_assessment = if requires_signing && signing.policy == SigningPolicy::Enforce
             {
                 enforce_signing_for_command(
@@ -454,6 +453,9 @@ async fn process_datagram(
             {
                 {
                     let mut counters = counters.lock().await;
+                    if is_critical_or_high_risk {
+                        counters.record_critical_command_observed();
+                    }
                     counters.record_blocked_packet();
                     counters.record_processing_latency_us(elapsed_us(processing_started));
                 }
@@ -482,17 +484,16 @@ async fn process_datagram(
             }
             let policy_started = Instant::now();
             let decision = evaluate_command(policy, &context, command);
-            counters
-                .lock()
-                .await
-                .record_policy_latency_us(elapsed_us(policy_started));
+            let policy_latency_us = elapsed_us(policy_started);
 
             match decision {
                 PolicyDecision::Allow => {
-                    counters
-                        .lock()
-                        .await
-                        .record_processing_latency_us(elapsed_us(processing_started));
+                    let mut counters = counters.lock().await;
+                    if is_critical_or_high_risk {
+                        counters.record_critical_command_observed();
+                    }
+                    counters.record_policy_latency_us(policy_latency_us);
+                    counters.record_processing_latency_us(elapsed_us(processing_started));
                     DatagramOutcome::Forward {
                         target: ForwardTarget::Vehicle,
                     }
@@ -510,10 +511,12 @@ async fn process_datagram(
                         latency_us = elapsed_us(processing_started),
                         "command would be blocked by policy"
                     );
-                    counters
-                        .lock()
-                        .await
-                        .record_processing_latency_us(elapsed_us(processing_started));
+                    let mut counters = counters.lock().await;
+                    if is_critical_or_high_risk {
+                        counters.record_critical_command_observed();
+                    }
+                    counters.record_policy_latency_us(policy_latency_us);
+                    counters.record_processing_latency_us(elapsed_us(processing_started));
                     DatagramOutcome::Forward {
                         target: ForwardTarget::Vehicle,
                     }
@@ -521,6 +524,10 @@ async fn process_datagram(
                 PolicyDecision::Block(reason) => {
                     {
                         let mut counters = counters.lock().await;
+                        if is_critical_or_high_risk {
+                            counters.record_critical_command_observed();
+                        }
+                        counters.record_policy_latency_us(policy_latency_us);
                         counters.record_blocked_packet();
                         counters.record_processing_latency_us(elapsed_us(processing_started));
                     }
@@ -539,10 +546,12 @@ async fn process_datagram(
                     DatagramOutcome::Blocked
                 }
                 PolicyDecision::DropInvalid(_) => {
-                    counters
-                        .lock()
-                        .await
-                        .record_processing_latency_us(elapsed_us(processing_started));
+                    let mut counters = counters.lock().await;
+                    if is_critical_or_high_risk {
+                        counters.record_critical_command_observed();
+                    }
+                    counters.record_policy_latency_us(policy_latency_us);
+                    counters.record_processing_latency_us(elapsed_us(processing_started));
                     DatagramOutcome::DropInvalid
                 }
             }
@@ -914,6 +923,17 @@ mod tests {
 
     fn arm_command() -> Vec<u8> {
         fixture(&arm_command_message())
+    }
+
+    fn arm_command_v1() -> Vec<u8> {
+        v1_fixture_with_header(
+            &arm_command_message(),
+            MavHeader {
+                sequence: 7,
+                system_id: 1,
+                component_id: 1,
+            },
+        )
     }
 
     fn takeoff_command_message() -> common::MavMessage {
@@ -1758,6 +1778,37 @@ mod tests {
         let counters = *counters.lock().await;
         assert_eq!(counters.packets_blocked_total, 1);
         assert_eq!(counters.packets_unsigned_rejected_total, 1);
+        assert_eq!(counters.packets_signed_observed_total, 0);
+        assert_eq!(counters.policy_latency_samples, 0);
+    }
+
+    #[tokio::test]
+    async fn signing_enforce_blocks_unsigned_mavlink_v1_critical_command() {
+        let flight_state = Mutex::new(FlightState::default());
+        let counters = Mutex::new(GatewayCounters::default());
+        let policy = certified_loopback_policy();
+        let source_ip = "127.0.0.1".parse().expect("valid IP");
+        let signing_validator = SigningValidator::new(crate::signing::INSECURE_TEST_SIGNING_KEY, 7);
+
+        let outcome = process_datagram(
+            UdpFlow::GcsToVehicle,
+            source_ip,
+            &arm_command_v1(),
+            &flight_state,
+            &counters,
+            &policy,
+            SigningAuditContext {
+                policy: SigningPolicy::Enforce,
+                validator: Some(&signing_validator),
+            },
+        )
+        .await;
+
+        assert_eq!(outcome, DatagramOutcome::Blocked);
+        let counters = *counters.lock().await;
+        assert_eq!(counters.packets_blocked_total, 1);
+        assert_eq!(counters.packets_unsigned_rejected_total, 1);
+        assert_eq!(counters.commands_critical_observed_total, 1);
         assert_eq!(counters.packets_signed_observed_total, 0);
         assert_eq!(counters.policy_latency_samples, 0);
     }

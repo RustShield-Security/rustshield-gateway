@@ -4,6 +4,7 @@ pub mod crypto;
 pub mod flight_state;
 pub mod logging;
 pub mod mavlink_codec;
+pub mod mavlink_constants;
 pub mod metrics;
 pub mod observability;
 pub mod security_filter;

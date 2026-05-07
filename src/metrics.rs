@@ -25,7 +25,6 @@ pub struct GatewayCounters {
     pub policy_latency_samples: u64,
     pub policy_latency_total_us: u64,
     pub policy_latency_max_us: u64,
-    pub last_heartbeat_age_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,7 +48,6 @@ pub enum MetricName {
     ProcessingLatencyUs,
     ParseLatencyUs,
     PolicyLatencyUs,
-    LastHeartbeatAgeMs,
 }
 
 impl MetricName {
@@ -74,7 +72,6 @@ impl MetricName {
             Self::ProcessingLatencyUs => "processing_latency_us",
             Self::ParseLatencyUs => "parse_latency_us",
             Self::PolicyLatencyUs => "policy_latency_us",
-            Self::LastHeartbeatAgeMs => "last_heartbeat_age_ms",
         }
     }
 }
@@ -160,9 +157,5 @@ impl GatewayCounters {
         self.policy_latency_samples += 1;
         self.policy_latency_total_us += latency_us;
         self.policy_latency_max_us = self.policy_latency_max_us.max(latency_us);
-    }
-
-    pub fn set_last_heartbeat_age_ms(&mut self, age_ms: u64) {
-        self.last_heartbeat_age_ms = Some(age_ms);
     }
 }

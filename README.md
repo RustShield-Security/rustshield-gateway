@@ -1,11 +1,23 @@
 # RustShield Gateway
 
-Security-oriented MAVLink gateway for controlled SITL/laboratory validation.
+RustShield Gateway is a Rust-based MAVLink security validation gateway for
+controlled SITL/laboratory workflows. It sits between a Ground Control Station
+and a MAVLink vehicle or simulator, observes traffic, applies semantic command
+policies, and produces logs, metrics and evidence for security review.
 
-RustShield Gateway is a Rust-based MAVLink security gateway technical preview
-for controlled SITL/laboratory validation. It focuses on semantic command
-policy, signing-aware audit/enforce paths, shadow enforcement, read-only
-observability and evidence-oriented engineering.
+It is for UAV integrators, drone security labs, critical infrastructure
+inspection teams, defense / dual-use R&D groups and academic robotics/security
+labs that need a controlled way to study high-risk MAVLink command behavior.
+
+Today, this repository can demonstrate a loopback lab flow:
+
+```text
+GCS/SITL traffic -> RustShield Gateway -> MAVLink policy decision -> logs, metrics and evidence
+```
+
+It does not claim certified flight safety, production readiness, real UAV flight
+validation, complete MAVLink security coverage or replacement for autopilot
+hardening.
 
 ## What It Does
 
@@ -59,13 +71,23 @@ cargo audit
 cargo deny check
 ```
 
-## Public Demo
+## Public Lab Demo
 
 The public demo is loopback-only and does not require real hardware, radios,
 QGroundControl or an autopilot.
 
 ```bash
 ./scripts/run-public-demo.sh
+```
+
+The demo flow is:
+
+```text
+GCS/SITL traffic
+  -> RustShield Gateway
+  -> MAVLink parser and flight-state context
+  -> semantic command policy decision
+  -> structured logs, read-only metrics and evidence summary
 ```
 
 See [docs/demo.md](docs/demo.md).
@@ -86,6 +108,12 @@ integration options.
 
 ## Documentation
 
+- [Who Is This For?](docs/who-is-this-for.md)
+- [Commercial Pilot Package](docs/commercial-pilot-package.md)
+- [Market Positioning](docs/market-positioning.md)
+- [Use Cases](docs/use-cases/README.md)
+- [GitHub Visibility Checklist](docs/github-visibility-checklist.md)
+- [Proposed GitHub Issues](docs/proposed-github-issues.md)
 - [Public Scope](docs/public-scope.md)
 - [Public Claims](docs/claims.md)
 - [Limitations](docs/limitations.md)
