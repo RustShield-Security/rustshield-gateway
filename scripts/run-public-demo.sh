@@ -98,6 +98,11 @@ if ! grep -q '^shadow_policy_would_block_total 1$' "$metrics_path"; then
   exit 1
 fi
 
+if ! grep -q '^shadow_signing_would_reject_total 1$' "$metrics_path"; then
+  echo "public demo failed: expected shadow_signing_would_reject_total 1" >&2
+  exit 1
+fi
+
 cat > "$evidence_dir/expected-results.md" <<'EOF'
 # Expected Results
 
@@ -110,6 +115,7 @@ cat > "$evidence_dir/expected-results.md" <<'EOF'
 - `gateway.log` must contain `security.command_blocked`.
 - `metrics.prom` must contain `packets_blocked_total 1`.
 - `metrics.prom` must contain `shadow_policy_would_block_total 1`.
+- `metrics.prom` must contain `shadow_signing_would_reject_total 1`.
 EOF
 
 cat > "$evidence_dir/claims.md" <<'EOF'
