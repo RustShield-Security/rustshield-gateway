@@ -23,6 +23,23 @@ Typical deliverables:
 - remediation plan;
 - final report and handover call.
 
+## Good Fit
+
+- MAVLink-based architecture.
+- ArduPilot, PX4, SITL or laboratory workflow.
+- Need for command-link security review.
+- Need for signing posture review.
+- Need for evidence-oriented assessment.
+- Need for controlled lab validation before hardware claims.
+
+## Not a Fit
+
+- Request for real-flight validation as the first engagement.
+- Certification-only engagement.
+- Hardware/radio testing as the first step.
+- Offensive testing without authorization.
+- Requests to bypass platform, network or key-management controls.
+
 ## RustShield Lab Pilot
 
 Controlled lab integration of RustShield around a SITL or laboratory workflow.

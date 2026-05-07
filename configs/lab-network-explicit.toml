@@ -1,0 +1,38 @@
+# Explicit non-loopback laboratory example.
+#
+# Use only inside an isolated, controlled lab network. This file is not a safe
+# default, does not validate real UAV operation, and must not be used for
+# hardware/radio/flight work without a dedicated safety procedure.
+
+[transport]
+mode = "udp"
+
+[udp]
+listen_vehicle = "0.0.0.0:14550"
+listen_gcs = "0.0.0.0:14551"
+vehicle_addr = "127.0.0.1:14540"
+gcs_addr = "127.0.0.1:14552"
+read_timeout_ms = 100
+max_datagram_size = 2048
+
+[security]
+certified_ips = ["127.0.0.2"]
+unknown_mode_policy = "block"
+audit_only = false
+shadow_enforce = true
+block_arm_in_auto_mode = true
+
+[signing]
+policy = "observe"
+link_id = 0
+
+[crypto]
+enabled = false
+
+[logging]
+level = "info"
+payload_logging = false
+
+[metrics]
+enabled = true
+readonly_bind = "127.0.0.1:14600"

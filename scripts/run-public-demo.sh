@@ -78,6 +78,26 @@ fi
 cleanup
 trap - EXIT
 
+if ! grep -q 'event="security.command_blocked"' "$gateway_log"; then
+  echo "public demo failed: security.command_blocked event not found" >&2
+  exit 1
+fi
+
+if ! grep -q 'rule_id="CRITICAL-UNKNOWN-001"' "$gateway_log"; then
+  echo "public demo failed: CRITICAL-UNKNOWN-001 not found" >&2
+  exit 1
+fi
+
+if ! grep -q '^packets_blocked_total 1$' "$metrics_path"; then
+  echo "public demo failed: expected packets_blocked_total 1" >&2
+  exit 1
+fi
+
+if ! grep -q '^shadow_policy_would_block_total 1$' "$metrics_path"; then
+  echo "public demo failed: expected shadow_policy_would_block_total 1" >&2
+  exit 1
+fi
+
 cat > "$evidence_dir/expected-results.md" <<'EOF'
 # Expected Results
 
@@ -85,10 +105,11 @@ cat > "$evidence_dir/expected-results.md" <<'EOF'
 - A MAVLink `MAV_CMD_COMPONENT_ARM_DISARM` attempt is sent to the GCS-side
   gateway socket.
 - Because no vehicle heartbeat established a supported safe mode and the
-  source IP is not certified, the command is expected to be blocked or reported
-  by the conservative policy path.
-- Metrics are expected to show received traffic and at least one security
-  decision counter.
+  source IP is not certified, the command must be blocked by
+  `CRITICAL-UNKNOWN-001`.
+- `gateway.log` must contain `security.command_blocked`.
+- `metrics.prom` must contain `packets_blocked_total 1`.
+- `metrics.prom` must contain `shadow_policy_would_block_total 1`.
 EOF
 
 cat > "$evidence_dir/claims.md" <<'EOF'

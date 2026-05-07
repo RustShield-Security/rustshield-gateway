@@ -25,8 +25,10 @@ target/public-demo-<timestamp>/
 
 - the gateway starts with a loopback-only configuration;
 - a MAVLink critical command can be injected into the GCS-side socket;
-- the gateway records a policy/signing/security decision;
+- the gateway blocks the command with `CRITICAL-UNKNOWN-001`;
+- the gateway records `security.command_blocked`;
 - read-only metrics are exposed on loopback;
+- `packets_blocked_total 1` is present in `metrics.prom`;
 - generated evidence states its limits.
 
 ## What It Does Not Demonstrate

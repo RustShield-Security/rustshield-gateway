@@ -31,6 +31,9 @@ jobs:
       - name: Test
         run: cargo test
 
+      - name: Public demo smoke test
+        run: ./scripts/run-public-demo.sh
+
   supply-chain:
     name: supply-chain checks
     runs-on: ubuntu-latest

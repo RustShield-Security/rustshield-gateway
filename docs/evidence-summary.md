@@ -45,6 +45,7 @@ docs/evidence/latest/
   fuzz-summary.md
   latency-summary.md
   artifact-hashes.md
+  public-demo-summary.md
   claims-and-limitations.md
 ```
 

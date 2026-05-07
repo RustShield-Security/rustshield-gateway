@@ -364,8 +364,8 @@ pub struct UdpConfig {
 impl Default for UdpConfig {
     fn default() -> Self {
         Self {
-            listen_gcs: "0.0.0.0:14551".parse().expect("valid default socket"),
-            listen_vehicle: "0.0.0.0:14550".parse().expect("valid default socket"),
+            listen_gcs: "127.0.0.1:14551".parse().expect("valid default socket"),
+            listen_vehicle: "127.0.0.1:14550".parse().expect("valid default socket"),
             vehicle_addr: "127.0.0.1:14540".parse().expect("valid default socket"),
             gcs_addr: "127.0.0.1:14552".parse().expect("valid default socket"),
             read_timeout_ms: 100,
@@ -454,8 +454,8 @@ mod tests {
             mode = "udp"
 
             [udp]
-            listen_gcs = "0.0.0.0:14551"
-            listen_vehicle = "0.0.0.0:14550"
+            listen_gcs = "127.0.0.1:14551"
+            listen_vehicle = "127.0.0.1:14550"
             vehicle_addr = "127.0.0.1:14540"
             gcs_addr = "127.0.0.1:14552"
             read_timeout_ms = 100
@@ -515,8 +515,8 @@ mod tests {
             mode = "serial"
 
             [udp]
-            listen_gcs = "0.0.0.0:14551"
-            listen_vehicle = "0.0.0.0:14550"
+            listen_gcs = "127.0.0.1:14551"
+            listen_vehicle = "127.0.0.1:14550"
             vehicle_addr = "127.0.0.1:14540"
             gcs_addr = "127.0.0.1:14552"
             read_timeout_ms = 100
@@ -586,8 +586,8 @@ mod tests {
             mode = "udp"
 
             [udp]
-            listen_gcs = "0.0.0.0:14551"
-            listen_vehicle = "0.0.0.0:14550"
+            listen_gcs = "127.0.0.1:14551"
+            listen_vehicle = "127.0.0.1:14550"
             vehicle_addr = "127.0.0.1:14540"
             gcs_addr = "127.0.0.1:14552"
             read_timeout_ms = 100
