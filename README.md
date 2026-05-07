@@ -1,106 +1,132 @@
 <div align="center">
-  <img src="assets/logo.png" alt="RustShield Logo" width="500">
+  <img src="assets/logo.png" alt="RustShield Gateway logo" width="420">
 
   # RustShield Gateway
-  ### The First Semantic Cybersecurity Shield for Autonomous UAVs
 
-  [![Rust](https://img.shields.io/badge/language-Rust-orange.svg?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
-  [![Architecture](https://img.shields.io/badge/architecture-arc42--aligned-blue?style=for-the-badge)](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
-  [![Safety](https://img.shields.io/badge/safety-memory--safe-brightgreen?style=for-the-badge)](https://www.rust-lang.org/policies/safety)
-  [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-lightgrey?style=for-the-badge)](#licencia)
+  **MAVLink security gateway research prototype for SITL and controlled laboratory validation.**
 
-  **Protegiendo activos críticos en el espacio aéreo mediante seguridad determinista y arquitecturas verificables.**
+  [![Rust](https://img.shields.io/badge/language-Rust-orange.svg?logo=rust)](https://www.rust-lang.org/)
+  [![Architecture](https://img.shields.io/badge/architecture-arc42--aligned-blue)](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
+  [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-lightgrey)](#license)
 </div>
 
----
+## What This Is
 
-## 🛡️ La Misión: Cerrar la Brecha de Seguridad en C2
+RustShield Gateway is a Rust-based security gateway for MAVLink-based UAV
+systems. It demonstrates semantic command filtering, signing observability,
+policy enforcement experiments, structured observability and assurance-oriented
+documentation.
 
-Los protocolos de comunicación en UAVs y robótica (MAVLink, ROS, Modbus) fueron diseñados para la eficiencia, descuidando la seguridad. Actualmente, una inyección de comandos no autorizada puede resultar en la pérdida catastrófica de activos.
+This public repository is a **technical preview and showcase**. It is intended
+for review, research discussion and partnership conversations. The private
+laboratory branch contains additional validation history, internal evidence and
+pre-hardware work.
 
-**RustShield Gateway** soluciona esto sin necesidad de recertificar o actualizar costosos firmwares de vuelo. Actúa como un **Escudo Semántico Transparente** que entiende el contexto de la misión y bloquea amenazas en microsegundos.
+## Current Public Scope
 
----
+Validated public-preview scope:
 
-## 🚀 Innovaciones Clave
+- MAVLink v1/v2 parsing using the `common` dialect;
+- UDP gateway path for SITL-style deployments;
+- ArduPilot Copter SITL as the primary documented target;
+- stateful `HEARTBEAT` interpretation for the documented ArduPilot Copter MVP;
+- semantic policy checks for critical/high-risk MAVLink commands;
+- MAVLink signing observability and laboratory enforcement experiments;
+- structured logs and read-only metrics primitives;
+- fuzzing, dependency auditing and assurance-oriented documentation.
 
-### 🧠 Filtrado Semántico (Stateful Shielding)
-A diferencia de los firewalls tradicionales, RustShield mantiene un **gemelo digital del estado de vuelo** (`FlightState`). Si un comando de "Desarmado" llega mientras el dron está en "Modo Automático" y a 100 metros de altura, el Shield lo bloquea instantáneamente como una operación incoherente y peligrosa.
+Public-preview limitations:
 
-### 🦀 Rendimiento con Garantías de Rust
-- **Zero-Copy Parsing**: Procesamiento ultrarrápido de paquetes MAVLink 2.0.
-- **Memory Safety**: Eliminación total de desbordamientos de búfer y condiciones de carrera.
-- **Latencia Sub-ms**: Procesamiento interno medio en **60µs**, garantizando que el control de vuelo no se vea afectado.
+- not certified for flight operations;
+- not validated for real UAV operation in this public preview;
+- not a complete PX4 mode-policy implementation;
+- not a complete hardware/radio/Serial product;
+- not a replacement for proper key management, network segmentation or platform
+  hardening;
+- not a guarantee of end-to-end real-time performance.
 
-### 📋 Ready for Certification (arc42)
-El Gateway no es una "caja negra". Ha sido diseñado bajo el estándar **arc42**, proporcionando una trazabilidad completa:
-- **ADRs (Architecture Decision Records)**: Cada decisión de diseño está documentada y justificada.
-- **Threat Model**: Análisis exhaustivo de vectores de ataque.
-- **Evidence Packs**: Documentación lista para procesos de auditoría y *assurance*.
+## Why It Exists
 
----
+MAVLink is efficient and widely used, but production deployments need explicit
+security controls around command authorization, signing, observability and
+operational evidence. RustShield explores an external gateway approach that can
+sit between a ground station and a vehicle or simulator:
 
-## 📊 Arquitectura del Sistema
-
-```mermaid
-graph LR
-    GCS[Ground Control Station] -- "MAVLink (UDP/Serial)" --> GW[RustShield Gateway]
-    GW -- "Filtrado Semántico" --> Vehiculo[UAV / Autopiloto]
-    
-    subgraph "Internal Pipeline"
-        GW --> DPI[Deep Packet Inspection]
-        DPI --> SM[State Monitor]
-        SM --> PE[Policy Engine]
-        PE --> Audit[Audit & Logging]
-    end
+```text
+Ground Control Station <-> RustShield Gateway <-> Autopilot / SITL
 ```
 
----
+The key idea is semantic filtering: a gateway should not only parse packets, but
+also evaluate whether a command is coherent with the current flight context and
+security policy.
 
-## ✨ Características Técnicas
+## Core Capabilities
 
-| Característica | Beneficio |
-| :--- | :--- |
-| **DPI (Deep Packet Inspection)** | Inspección profunda de mensajes `COMMAND_LONG` y `COMMAND_INT`. |
-| **Criptografía AEAD** | Soporte para ChaCha20-Poly1305 en flujos de datos sensibles. |
-| **Fuzzing-Tested** | Validado contra ataques de red mediante campañas de fuzzing intensivas. |
-| **Observabilidad Industrial** | Métricas en tiempo real vía endpoint Prometheus/Healthz. |
-| **Agnóstico al Hardware** | Compatible con ArduPilot, PX4 y cualquier sistema basado en MAVLink. |
+| Area | Public Preview Capability |
+|---|---|
+| MAVLink parsing | Parses MAVLink v1/v2 frames and extracts routing/signing metadata. |
+| Flight state | Maintains a conservative state from `HEARTBEAT`. |
+| Policy engine | Blocks or audits critical/high-risk command classes under documented conditions. |
+| Signing | Observes MAVLink 2 signing and supports laboratory validation/enforcement paths. |
+| Observability | Emits structured logs and read-only metrics suitable for evidence capture. |
+| Assurance docs | Includes ADRs, arc42 architecture, threat model, traceability and risk register. |
 
----
+## Safety Notice
 
-## 🛠️ Laboratorio de Validación (SITL)
+This repository is for documentation, simulation and controlled laboratory work.
+Do not use it to arm, disarm, take off, land, change mode, upload missions,
+mutate parameters or send RC override commands to real UAV hardware unless a
+separate safety procedure, test plan and explicit authorization exist.
 
-El proyecto incluye un entorno de validación automatizado para investigadores y operadores:
+All MAVLink input must be treated as untrusted.
+
+## Quick Start
 
 ```bash
-# Iniciar el Gateway en modo simulación
-./scripts/run-sitl-gateway.sh
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test
+```
 
-# Simular un ataque de inyección de comando de armado no autorizado
+Example SITL-oriented scripts are included for public review. They are not a
+flight-operation procedure.
+
+```bash
+./scripts/run-sitl-gateway.sh
 ./scripts/send-sitl-arm-command.sh 127.0.0.1:14551
 ```
 
----
+## Documentation Map
 
-## 📂 Ecosistema de Documentación
+- [Architecture arc42](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md)
+- [Threat Model](definicion/modelo-amenazas-mavlink-rust-shield-gateway.md)
+- [Security Policies](definicion/especificacion-politicas-seguridad.md)
+- [Observability Spec](definicion/especificacion-observabilidad.md)
+- [Compatibility Matrix](definicion/matriz-compatibilidad-gcs-autopilotos.md)
+- [Risk Register](definicion/registro-riesgos.md)
+- [Public Scope](docs/public-scope.md)
+- [Evidence Summary](docs/evidence-summary.md)
+- [Public Roadmap](docs/public-roadmap.md)
 
-Hemos estructurado el conocimiento para diferentes perfiles de interés:
+## Commercial / Partnership Use
 
-- **Para Inversores/Partners**: [Dossier Comercial (One-Pager)](producto/dossier-comercial-one-pager.md) y [Roadmap de Producto](producto/roadmap-producto-v1.md).
-- **Para Ingenieros**: [Especificación de Políticas](definicion/especificacion-politicas-seguridad.md) y [Estrategia Criptográfica](definicion/estrategia-gestion-claves.md).
-- **Para Auditores**: [Matriz de Trazabilidad](definicion/trazabilidad-mvp-0.1.md) y [Arquitectura arc42](definicion/arquitectura-arc42-mavlink-rust-shield-gateway.md).
+The public repository is intentionally limited. For partnership, integration or
+acquisition discussions, the useful artifact is not just the code: it is the
+combination of gateway implementation, security policy model, evidence workflow
+and controlled laboratory validation plan.
 
----
+See [Product Brief](docs/product-brief.md).
 
-## ⚖️ Licencia
+## Security
 
-Declarado bajo licencia dual **MIT** o **Apache-2.0**, permitiendo su integración tanto en proyectos Open Source como en ecosistemas industriales cerrados.
+Please see [SECURITY.md](SECURITY.md) before reporting vulnerabilities or using
+the project in a lab.
 
----
+## License
 
-<div align="center">
-  <strong>RustShield Labs</strong><br>
-  <em>Cybersecurity for the next generation of autonomous systems.</em><br>
-  <a href="mailto:rustshield.security@proton.me">Contacto</a> • <a href="https://github.com/RustShield-Security">GitHub Organization</a>
-</div>
+Licensed under either of:
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
+- MIT License ([LICENSE-MIT](LICENSE-MIT))
+
+at your option.
