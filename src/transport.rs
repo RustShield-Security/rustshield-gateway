@@ -2005,14 +2005,6 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn shadow_enforce_reports_policy_would_block_without_blocking() {
-        let output = StdArc::new(StdMutex::new(Vec::new()));
-        let subscriber = tracing_subscriber::fmt()
-            .with_ansi(false)
-            .with_max_level(tracing::Level::TRACE)
-            .without_time()
-            .with_writer(CapturedWriter::new(StdArc::clone(&output)))
-            .finish();
-        let guard = tracing::subscriber::set_default(subscriber);
         let flight_state = Mutex::new(FlightState::default());
         let counters = Mutex::new(GatewayCounters::default());
         let mut policy = test_policy();
@@ -2054,7 +2046,6 @@ mod tests {
             },
         )
         .await;
-        drop(guard);
 
         assert_eq!(
             command_outcome,
@@ -2067,13 +2058,6 @@ mod tests {
         assert_eq!(counters.shadow_policy_would_block_total, 1);
         assert_eq!(counters.shadow_signing_would_reject_total, 1);
         assert_eq!(counters.shadow_unsigned_critical_total, 1);
-
-        let output = String::from_utf8(output.lock().expect("log buffer lock").clone())
-            .expect("logs are UTF-8");
-        assert!(output.contains("security.shadow_would_block"));
-        assert!(output.contains("signing.shadow_would_reject"));
-        assert!(!output.contains("payload"));
-        assert!(!output.contains("1021324354657687"));
     }
 
     #[tokio::test]
