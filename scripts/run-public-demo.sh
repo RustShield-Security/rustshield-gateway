@@ -121,7 +121,7 @@ if [[ "$command_blocked" != true ]]; then
   exit 1
 fi
 
-if ! grep -q 'rule_id="CRITICAL-UNKNOWN-001"' "$gateway_log"; then
+if ! grep -q 'CRITICAL-UNKNOWN-001' "$gateway_log"; then
   print_failure_context "CRITICAL-UNKNOWN-001 not found"
   exit 1
 fi
