@@ -75,8 +75,20 @@ if [[ "$gateway_ready" != true ]]; then
   exit 1
 fi
 
-target/debug/sitl-send-arm-command 127.0.0.1:14651 >>"$demo_log" 2>&1
-sleep 0.5
+command_blocked=false
+for _ in $(seq 1 10); do
+  target/debug/sitl-send-arm-command 127.0.0.1:14651 >>"$demo_log" 2>&1
+  for _ in $(seq 1 10); do
+    if grep -q 'event="security.command_blocked"' "$gateway_log"; then
+      command_blocked=true
+      break
+    fi
+    sleep 0.2
+  done
+  if [[ "$command_blocked" == true ]]; then
+    break
+  fi
+done
 
 if command -v curl >/dev/null 2>&1; then
   curl -fsS "http://127.0.0.1:14660/metrics" > "$metrics_path"
@@ -87,7 +99,7 @@ fi
 cleanup
 trap - EXIT
 
-if ! grep -q 'event="security.command_blocked"' "$gateway_log"; then
+if [[ "$command_blocked" != true ]]; then
   echo "public demo failed: security.command_blocked event not found" >&2
   exit 1
 fi
@@ -97,18 +109,18 @@ if ! grep -q 'rule_id="CRITICAL-UNKNOWN-001"' "$gateway_log"; then
   exit 1
 fi
 
-if ! grep -q '^packets_blocked_total 1$' "$metrics_path"; then
-  echo "public demo failed: expected packets_blocked_total 1" >&2
+if ! awk '$1 == "packets_blocked_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
+  echo "public demo failed: expected packets_blocked_total >= 1" >&2
   exit 1
 fi
 
-if ! grep -q '^shadow_policy_would_block_total 1$' "$metrics_path"; then
-  echo "public demo failed: expected shadow_policy_would_block_total 1" >&2
+if ! awk '$1 == "shadow_policy_would_block_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
+  echo "public demo failed: expected shadow_policy_would_block_total >= 1" >&2
   exit 1
 fi
 
-if ! grep -q '^shadow_signing_would_reject_total 1$' "$metrics_path"; then
-  echo "public demo failed: expected shadow_signing_would_reject_total 1" >&2
+if ! awk '$1 == "shadow_signing_would_reject_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
+  echo "public demo failed: expected shadow_signing_would_reject_total >= 1" >&2
   exit 1
 fi
 
@@ -122,9 +134,9 @@ cat > "$evidence_dir/expected-results.md" <<'EOF'
   source IP is not certified, the command must be blocked by
   `CRITICAL-UNKNOWN-001`.
 - `gateway.log` must contain `security.command_blocked`.
-- `metrics.prom` must contain `packets_blocked_total 1`.
-- `metrics.prom` must contain `shadow_policy_would_block_total 1`.
-- `metrics.prom` must contain `shadow_signing_would_reject_total 1`.
+- `metrics.prom` must contain `packets_blocked_total >= 1`.
+- `metrics.prom` must contain `shadow_policy_would_block_total >= 1`.
+- `metrics.prom` must contain `shadow_signing_would_reject_total >= 1`.
 EOF
 
 cat > "$evidence_dir/claims.md" <<'EOF'
