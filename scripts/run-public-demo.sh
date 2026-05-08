@@ -56,17 +56,26 @@ trap cleanup EXIT
 
 cd "$repo_root"
 
-cargo run --bin mavlink-shield-gateway -- --config "$config_path" >"$gateway_log" 2>&1 &
+cargo build --bins >>"$demo_log" 2>&1
+
+target/debug/mavlink-shield-gateway --config "$config_path" >"$gateway_log" 2>&1 &
 gateway_pid="$!"
 
+gateway_ready=false
 for _ in $(seq 1 30); do
   if grep -q 'transport.opened' "$gateway_log" 2>/dev/null; then
+    gateway_ready=true
     break
   fi
   sleep 0.2
 done
 
-cargo run --bin sitl-send-arm-command -- 127.0.0.1:14651 >>"$demo_log" 2>&1
+if [[ "$gateway_ready" != true ]]; then
+  echo "public demo failed: gateway did not report transport.opened" >&2
+  exit 1
+fi
+
+target/debug/sitl-send-arm-command 127.0.0.1:14651 >>"$demo_log" 2>&1
 sleep 0.5
 
 if command -v curl >/dev/null 2>&1; then
