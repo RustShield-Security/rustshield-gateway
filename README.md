@@ -30,6 +30,15 @@ RustShield evaluates selected high-risk MAVLink traffic using:
 - read-only logs and metrics for evidence capture;
 - reproducible local checks and public evidence summaries.
 
+## Why an External Gateway?
+
+RustShield is useful when the cost, risk or ownership constraints of modifying
+autopilot firmware make external command-path controls a practical first step.
+
+It helps UAV teams observe MAVLink command behavior, evaluate high-risk command
+policies, test shadow enforcement impact and collect evidence before committing
+to deeper firmware, platform or operational changes.
+
 ## Current Public Scope
 
 - MAVLink UDP/SITL gateway.
@@ -112,6 +121,7 @@ integration options.
 
 ## Documentation
 
+- [External Gateway Approach](docs/retrofit-security-for-existing-fleets.md)
 - [Who Is This For?](docs/who-is-this-for.md)
 - [Commercial Pilot Package](docs/commercial-pilot-package.md)
 - [Market Positioning](docs/market-positioning.md)
