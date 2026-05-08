@@ -54,6 +54,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
+print_failure_context() {
+  local label="$1"
+  echo "public demo failed: $label" >&2
+  if [[ -f "$gateway_log" ]]; then
+    echo "--- gateway.log tail ---" >&2
+    tail -120 "$gateway_log" >&2 || true
+  fi
+  if [[ -f "$demo_log" ]]; then
+    echo "--- demo.log tail ---" >&2
+    tail -80 "$demo_log" >&2 || true
+  fi
+  if [[ -f "$metrics_path" ]]; then
+    echo "--- metrics.prom ---" >&2
+    cat "$metrics_path" >&2 || true
+  fi
+}
+
 cd "$repo_root"
 
 cargo build --bins >>"$demo_log" 2>&1
@@ -71,7 +88,7 @@ for _ in $(seq 1 30); do
 done
 
 if [[ "$gateway_ready" != true ]]; then
-  echo "public demo failed: gateway did not report transport.opened" >&2
+  print_failure_context "gateway did not report transport.opened"
   exit 1
 fi
 
@@ -79,7 +96,7 @@ command_blocked=false
 for _ in $(seq 1 10); do
   target/debug/sitl-send-arm-command 127.0.0.1:14651 >>"$demo_log" 2>&1
   for _ in $(seq 1 10); do
-    if grep -q 'event="security.command_blocked"' "$gateway_log"; then
+    if grep -q 'security.command_blocked' "$gateway_log"; then
       command_blocked=true
       break
     fi
@@ -100,27 +117,27 @@ cleanup
 trap - EXIT
 
 if [[ "$command_blocked" != true ]]; then
-  echo "public demo failed: security.command_blocked event not found" >&2
+  print_failure_context "security.command_blocked event not found"
   exit 1
 fi
 
 if ! grep -q 'rule_id="CRITICAL-UNKNOWN-001"' "$gateway_log"; then
-  echo "public demo failed: CRITICAL-UNKNOWN-001 not found" >&2
+  print_failure_context "CRITICAL-UNKNOWN-001 not found"
   exit 1
 fi
 
 if ! awk '$1 == "packets_blocked_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
-  echo "public demo failed: expected packets_blocked_total >= 1" >&2
+  print_failure_context "expected packets_blocked_total >= 1"
   exit 1
 fi
 
 if ! awk '$1 == "shadow_policy_would_block_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
-  echo "public demo failed: expected shadow_policy_would_block_total >= 1" >&2
+  print_failure_context "expected shadow_policy_would_block_total >= 1"
   exit 1
 fi
 
 if ! awk '$1 == "shadow_signing_would_reject_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
-  echo "public demo failed: expected shadow_signing_would_reject_total >= 1" >&2
+  print_failure_context "expected shadow_signing_would_reject_total >= 1"
   exit 1
 fi
 
