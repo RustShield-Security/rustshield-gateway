@@ -25,9 +25,9 @@ documented policy.
 
 ## Current Commercial Position
 
-This is an early technical asset and product prototype, not a certified flight
-system. Its current value is in security architecture, policy design, simulation
-evidence, and the ability to support controlled lab pilots.
+This is an early technical asset and product prototype, not a flight-operations
+approval. Its current value is in security architecture, policy design,
+simulation evidence, and the ability to support controlled lab pilots.
 
 Commercial discussions should start from assessment or laboratory pilot scope,
 not production flight deployment.

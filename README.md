@@ -15,8 +15,8 @@ Today, this repository can demonstrate a loopback lab flow:
 GCS/SITL traffic -> RustShield Gateway -> MAVLink policy decision -> logs, metrics and evidence
 ```
 
-It does not claim certified flight safety, production readiness, real UAV flight
-validation, complete MAVLink security coverage or replacement for autopilot
+It does not claim formal flight-safety approval, production readiness, real UAV
+flight validation, complete MAVLink security coverage or replacement for autopilot
 hardening.
 
 ## What It Does
@@ -56,12 +56,12 @@ to deeper firmware, platform or operational changes.
 ## Not Claimed
 
 - No real UAV flight readiness.
-- No certification.
+- No formal assurance approval.
 - No hardware/radio validation.
 - No production Serial/radio support.
 - No complete PX4 mode-policy support.
 - No complete MAVLink security coverage.
-- No guaranteed end-to-end real-time performance.
+- No hard real-time performance guarantee.
 - No replacement for platform hardening, key management or network
   segmentation.
 
@@ -140,6 +140,10 @@ integration options.
 - [Architecture Summary](docs/architecture-summary.md)
 - [Threat Model Summary](docs/threat-model-summary.md)
 - [Policy Catalog Summary](docs/policy-catalog-summary.md)
+- [Policy Matrix](docs/policy-matrix.md)
+- [Test Coverage Summary](docs/test-coverage-summary.md)
+- [Fixtures Summary](docs/fixtures-summary.md)
+- [Evidence Ladder](docs/evidence-ladder.md)
 - [Signing Lab Summary](docs/signing-lab-summary.md)
 - [Observability Summary](docs/observability-summary.md)
 

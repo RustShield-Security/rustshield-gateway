@@ -25,7 +25,7 @@ Out of scope:
 
 Do not use this project to command real UAV hardware unless there is a separate
 controlled safety procedure and explicit authorization. This repository is not
-certified for flight operations.
+a flight-operations approval.
 
 ## Reporting
 

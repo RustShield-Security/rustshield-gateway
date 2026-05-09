@@ -44,5 +44,12 @@ Snapshot: 2026-05-07 public showcase hardening.
 - [Claims and Limitations](claims-and-limitations.md)
 - [Artifact Hashes](artifact-hashes.md)
 
+## Evidence Context
+
+- [Policy Matrix](../../policy-matrix.md)
+- [Test Coverage Summary](../../test-coverage-summary.md)
+- [Fixtures Summary](../../fixtures-summary.md)
+- [Evidence Ladder](../../evidence-ladder.md)
+
 This public pack is intentionally summarized. It does not include raw private
 laboratory logs, private implementation memory, customer material or secrets.

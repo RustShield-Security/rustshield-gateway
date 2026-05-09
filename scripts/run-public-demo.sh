@@ -54,58 +54,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
-print_failure_context() {
-  local label="$1"
-  echo "public demo failed: $label" >&2
-  if [[ -f "$gateway_log" ]]; then
-    echo "--- gateway.log tail ---" >&2
-    tail -120 "$gateway_log" >&2 || true
-  fi
-  if [[ -f "$demo_log" ]]; then
-    echo "--- demo.log tail ---" >&2
-    tail -80 "$demo_log" >&2 || true
-  fi
-  if [[ -f "$metrics_path" ]]; then
-    echo "--- metrics.prom ---" >&2
-    cat "$metrics_path" >&2 || true
-  fi
-}
-
 cd "$repo_root"
 
-cargo build --bins >>"$demo_log" 2>&1
-
-target/debug/mavlink-shield-gateway --config "$config_path" >"$gateway_log" 2>&1 &
+cargo run --bin mavlink-shield-gateway -- --config "$config_path" >"$gateway_log" 2>&1 &
 gateway_pid="$!"
 
-gateway_ready=false
 for _ in $(seq 1 30); do
   if grep -q 'transport.opened' "$gateway_log" 2>/dev/null; then
-    gateway_ready=true
     break
   fi
   sleep 0.2
 done
 
-if [[ "$gateway_ready" != true ]]; then
-  print_failure_context "gateway did not report transport.opened"
-  exit 1
-fi
-
-command_blocked=false
-for _ in $(seq 1 10); do
-  target/debug/sitl-send-arm-command 127.0.0.1:14651 >>"$demo_log" 2>&1
-  for _ in $(seq 1 10); do
-    if grep -q 'security.command_blocked' "$gateway_log"; then
-      command_blocked=true
-      break
-    fi
-    sleep 0.2
-  done
-  if [[ "$command_blocked" == true ]]; then
-    break
-  fi
-done
+cargo run --bin sitl-send-arm-command -- 127.0.0.1:14651 >>"$demo_log" 2>&1
+sleep 0.5
 
 if command -v curl >/dev/null 2>&1; then
   curl -fsS "http://127.0.0.1:14660/metrics" > "$metrics_path"
@@ -116,28 +78,28 @@ fi
 cleanup
 trap - EXIT
 
-if [[ "$command_blocked" != true ]]; then
-  print_failure_context "security.command_blocked event not found"
+if ! grep -q 'event="security.command_blocked"' "$gateway_log"; then
+  echo "public demo failed: security.command_blocked event not found" >&2
   exit 1
 fi
 
-if ! grep -q 'CRITICAL-UNKNOWN-001' "$gateway_log"; then
-  print_failure_context "CRITICAL-UNKNOWN-001 not found"
+if ! grep -q 'rule_id="CRITICAL-UNKNOWN-001"' "$gateway_log"; then
+  echo "public demo failed: CRITICAL-UNKNOWN-001 not found" >&2
   exit 1
 fi
 
-if ! awk '$1 == "packets_blocked_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
-  print_failure_context "expected packets_blocked_total >= 1"
+if ! grep -q '^packets_blocked_total 1$' "$metrics_path"; then
+  echo "public demo failed: expected packets_blocked_total 1" >&2
   exit 1
 fi
 
-if ! awk '$1 == "shadow_policy_would_block_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
-  print_failure_context "expected shadow_policy_would_block_total >= 1"
+if ! grep -q '^shadow_policy_would_block_total 1$' "$metrics_path"; then
+  echo "public demo failed: expected shadow_policy_would_block_total 1" >&2
   exit 1
 fi
 
-if ! awk '$1 == "shadow_signing_would_reject_total" && $2 >= 1 { found=1 } END { exit found ? 0 : 1 }' "$metrics_path"; then
-  print_failure_context "expected shadow_signing_would_reject_total >= 1"
+if ! grep -q '^shadow_signing_would_reject_total 1$' "$metrics_path"; then
+  echo "public demo failed: expected shadow_signing_would_reject_total 1" >&2
   exit 1
 fi
 
@@ -148,12 +110,12 @@ cat > "$evidence_dir/expected-results.md" <<'EOF'
 - A MAVLink `MAV_CMD_COMPONENT_ARM_DISARM` attempt is sent to the GCS-side
   gateway socket.
 - Because no vehicle heartbeat established a supported safe mode and the
-  source IP is not certified, the command must be blocked by
+  source IP is not approved by policy, the command must be blocked by
   `CRITICAL-UNKNOWN-001`.
 - `gateway.log` must contain `security.command_blocked`.
-- `metrics.prom` must contain `packets_blocked_total >= 1`.
-- `metrics.prom` must contain `shadow_policy_would_block_total >= 1`.
-- `metrics.prom` must contain `shadow_signing_would_reject_total >= 1`.
+- `metrics.prom` must contain `packets_blocked_total 1`.
+- `metrics.prom` must contain `shadow_policy_would_block_total 1`.
+- `metrics.prom` must contain `shadow_signing_would_reject_total 1`.
 EOF
 
 cat > "$evidence_dir/claims.md" <<'EOF'
@@ -169,10 +131,10 @@ cat > "$evidence_dir/claims.md" <<'EOF'
 
 ## Not Allowed
 
-- Flight readiness.
-- Certification.
+- Flight-operation readiness.
+- Formal approval.
 - Hardware/radio validation.
-- Complete MAVLink security coverage.
+- Comprehensive MAVLink security coverage.
 EOF
 
 cat > "$evidence_dir/README.md" <<EOF
@@ -185,8 +147,8 @@ cat > "$evidence_dir/README.md" <<EOF
 - Metrics: metrics.prom
 
 This evidence is a loopback-only smoke test. It does not validate real UAV
-hardware, radio links, flight behavior, QGroundControl UI behavior or
-certification readiness.
+hardware, radio links, flight behavior, QGroundControl UI behavior or formal
+assurance readiness.
 EOF
 
 printf '%s\n' "$evidence_dir"

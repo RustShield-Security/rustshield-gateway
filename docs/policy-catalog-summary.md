@@ -19,5 +19,7 @@ Examples include:
 The catalog is intentionally selective. It should be reviewed and extended for
 each autopilot, vehicle type, mission profile and deployment environment.
 
+For a rule-by-rule public view, see [policy-matrix.md](policy-matrix.md).
+
 See [claims.md](claims.md) and [limitations.md](limitations.md) before making
 coverage claims.

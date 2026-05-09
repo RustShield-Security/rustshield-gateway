@@ -16,9 +16,9 @@ See also:
 
 ## Not Allowed
 
-- Flight-ready.
-- Certified.
-- Hardware/radio validated.
+- Ready for flight operations.
+- Formally approved.
+- Hardware/radio validation.
 - Complete PX4 support.
 - Complete MAVLink security coverage.
-- Guaranteed end-to-end real-time performance.
+- Hard real-time performance guarantee.

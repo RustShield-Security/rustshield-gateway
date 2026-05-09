@@ -12,11 +12,11 @@ for controlled lab and SITL workflows.
 
 ## RustShield Gateway Is Not
 
-- a certified flight system;
+- a flight-approved system;
 - a replacement for autopilot hardening;
 - a generic HTTP gateway;
 - a generic NGINX/Envoy competitor;
-- a complete MAVLink security solution;
+- a comprehensive MAVLink security solution;
 - validated for real UAV flight.
 
 ## Positioning Statement
@@ -39,13 +39,13 @@ Use:
 
 Avoid:
 
-- "flight-ready";
-- "certified";
-- "production-safe";
-- "military-grade";
-- "complete protection";
+- "ready for flight operations";
+- "formally approved";
+- "safe for production use";
+- "combat-grade";
+- "comprehensive protection";
 - "drop-in aircraft security";
-- "guaranteed real-time protection".
+- "hard real-time protection guarantee".
 
 ## Evidence Boundary
 

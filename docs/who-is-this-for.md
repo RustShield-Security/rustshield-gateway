@@ -1,7 +1,7 @@
 # Who Is This For?
 
 RustShield Gateway is for teams that need to understand MAVLink command risk in
-a controlled lab or SITL environment. It is not positioned as a certified flight
+a controlled lab or SITL environment. It is not positioned as a flight-approved
 component or a production control system.
 
 ## UAV Integrators
@@ -36,7 +36,7 @@ Useful questions:
 
 Boundary:
 
-- The project is not a complete MAVLink security solution.
+- The project is not a comprehensive MAVLink security solution.
 - Results should be reported as lab findings unless separately validated in a
   broader environment.
 

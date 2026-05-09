@@ -36,9 +36,9 @@ assurance-oriented documentation.
 
 Not allowed without additional public evidence:
 
-- certified flight safety;
+- formal flight-safety approval;
 - real hardware validation;
 - production Serial/radio support;
 - complete PX4 support;
 - complete MAVLink security coverage;
-- guaranteed end-to-end real-time performance.
+- hard real-time performance guarantees.

@@ -1,0 +1,19 @@
+ CHANGELOG.md                                   | 43 [32m+++++++++++++[m[31m-[m
+ Cargo.lock                                     | 14 [32m++[m[31m---[m
+ README.md                                      | 12 [32m++[m[31m--[m
+ SECURITY.md                                    |  2 [32m+[m[31m-[m
+ docs/claims.md                                 | 10 [32m++[m[31m--[m
+ docs/demo.md                                   | 38 [32m++++++++++++[m
+ docs/evidence/latest/README.md                 |  7 [32m+++[m
+ docs/evidence/latest/claims-and-limitations.md |  8 [32m+[m[31m--[m
+ docs/evidence/latest/public-demo-summary.md    | 12 [32m++++[m
+ docs/limitations.md                            |  4 [32m+[m[31m-[m
+ docs/market-positioning.md                     | 16 [32m++[m[31m---[m
+ docs/policy-catalog-summary.md                 |  2 [32m+[m
+ docs/product-brief.md                          |  6 [32m+[m[31m-[m
+ docs/public-scope.md                           |  4 [32m+[m[31m-[m
+ docs/use-cases/README.md                       |  5 [32m+[m[31m-[m
+ docs/who-is-this-for.md                        |  4 [32m+[m[31m-[m
+ scripts/run-public-demo.sh                     | 82 [32m+++++++[m[31m-------------------[m
+ src/transport.rs                               | 16 [32m+++++[m
+ 18 files changed, 184 insertions(+), 101 deletions(-)

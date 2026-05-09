@@ -26,8 +26,9 @@ catalog.
 
 Depending on mode state, source context and policy configuration, the gateway
 can block, forward or audit the command. For MVP-style ARM behavior,
-`ARM-AUTO-001` blocks non-certified arming attempts in `Automatic` mode, while
-unknown mode state is handled conservatively by `CRITICAL-UNKNOWN-001`.
+`ARM-AUTO-001` blocks arming attempts from sources not approved by policy in
+`Automatic` mode, while unknown mode state is handled conservatively by
+`CRITICAL-UNKNOWN-001`.
 
 ### Evidence Generated
 

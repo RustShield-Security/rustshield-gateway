@@ -14,16 +14,16 @@
 
 ## Not Allowed Claims
 
-- Certified for flight operations.
+- Formal flight-operations approval.
 - Validated for real UAV operation.
 - Complete PX4 support.
 - Complete MAVLink security coverage.
 - Complete Serial/radio hardware support.
-- Guaranteed end-to-end real-time performance.
+- Hard real-time performance guarantee.
 - Replacement for platform hardening, key management or network segmentation.
-- Military-grade protection.
-- Anti-hijacking system.
-- Unhackable gateway.
+- Combat-grade protection.
+- Hijack-proof system.
+- Impossible-to-compromise gateway.
 
 ## Required Wording
 

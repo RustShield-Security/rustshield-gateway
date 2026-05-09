@@ -21,9 +21,9 @@ limited by design.
 
 - No real UAV operation is validated by this public repository.
 - No flight safety claim is made.
-- No certification claim is made.
+- No formal assurance approval claim is made.
 - No hardware/radio claim is made.
-- No guaranteed end-to-end real-time performance is claimed.
+- No hard real-time performance guarantee is claimed.
 
 ## Evidence Limits
 
