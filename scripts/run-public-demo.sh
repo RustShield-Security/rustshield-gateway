@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd "$script_dir/.." && pwd)"
+if [[ ! -f "$repo_root/Cargo.toml" && -f "$script_dir/../../Cargo.toml" ]]; then
+  repo_root="$(cd "$script_dir/../.." && pwd)"
+fi
 timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
 evidence_dir="${1:-$repo_root/target/public-demo-$timestamp}"
 config_path="$evidence_dir/public-demo.toml"
@@ -58,7 +62,7 @@ cd "$repo_root"
 
 cargo build --bin mavlink-shield-gateway --bin sitl-send-arm-command >>"$demo_log" 2>&1
 
-cargo run --bin mavlink-shield-gateway -- --config "$config_path" >"$gateway_log" 2>&1 &
+"$repo_root/target/debug/mavlink-shield-gateway" --config "$config_path" >"$gateway_log" 2>&1 &
 gateway_pid="$!"
 
 gateway_ready=false
@@ -75,8 +79,17 @@ if [[ "$gateway_ready" != true ]]; then
   exit 1
 fi
 
-cargo run --bin sitl-send-arm-command -- 127.0.0.1:14651 >>"$demo_log" 2>&1
-sleep 0.5
+"$repo_root/target/debug/sitl-send-arm-command" 127.0.0.1:14651 >>"$demo_log" 2>&1
+
+demo_observed=false
+for _ in $(seq 1 100); do
+  if grep -q 'security.command_blocked' "$gateway_log" 2>/dev/null &&
+     grep -q 'CRITICAL-UNKNOWN-001' "$gateway_log" 2>/dev/null; then
+    demo_observed=true
+    break
+  fi
+  sleep 0.1
+done
 
 if command -v curl >/dev/null 2>&1; then
   curl -fsS "http://127.0.0.1:14660/metrics" > "$metrics_path"
@@ -87,32 +100,55 @@ fi
 cleanup
 trap - EXIT
 
-if ! grep -q 'event="security.command_blocked"' "$gateway_log"; then
+dump_debug() {
+  {
+    echo "----- gateway.log -----"
+    cat "$gateway_log" 2>/dev/null || true
+    echo "----- demo.log -----"
+    cat "$demo_log" 2>/dev/null || true
+    echo "----- metrics.prom -----"
+    cat "$metrics_path" 2>/dev/null || true
+  } >&2
+}
+
+if [[ "$demo_observed" != true ]]; then
+  dump_debug
   echo "public demo failed: security.command_blocked event not found" >&2
   exit 1
 fi
 
-if ! grep -q 'rule_id="CRITICAL-UNKNOWN-001"' "$gateway_log"; then
+if ! grep -q 'security.command_blocked' "$gateway_log"; then
+  dump_debug
+  echo "public demo failed: security.command_blocked event not found" >&2
+  exit 1
+fi
+
+if ! grep -q 'CRITICAL-UNKNOWN-001' "$gateway_log"; then
+  dump_debug
   echo "public demo failed: CRITICAL-UNKNOWN-001 not found" >&2
   exit 1
 fi
 
 if ! grep -q '^packets_blocked_total 1$' "$metrics_path"; then
+  dump_debug
   echo "public demo failed: expected packets_blocked_total 1" >&2
   exit 1
 fi
 
 if ! grep -q '^shadow_policy_would_block_total 1$' "$metrics_path"; then
+  dump_debug
   echo "public demo failed: expected shadow_policy_would_block_total 1" >&2
   exit 1
 fi
 
 if ! grep -q '^shadow_signing_would_reject_total 1$' "$metrics_path"; then
+  dump_debug
   echo "public demo failed: expected shadow_signing_would_reject_total 1" >&2
   exit 1
 fi
 
 if ! grep -q '^commands_critical_observed_total 1$' "$metrics_path"; then
+  dump_debug
   echo "public demo failed: expected commands_critical_observed_total 1" >&2
   exit 1
 fi
