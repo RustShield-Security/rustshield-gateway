@@ -56,15 +56,24 @@ trap cleanup EXIT
 
 cd "$repo_root"
 
+cargo build --bin mavlink-shield-gateway --bin sitl-send-arm-command >>"$demo_log" 2>&1
+
 cargo run --bin mavlink-shield-gateway -- --config "$config_path" >"$gateway_log" 2>&1 &
 gateway_pid="$!"
 
-for _ in $(seq 1 30); do
+gateway_ready=false
+for _ in $(seq 1 150); do
   if grep -q 'transport.opened' "$gateway_log" 2>/dev/null; then
+    gateway_ready=true
     break
   fi
   sleep 0.2
 done
+
+if [[ "$gateway_ready" != true ]]; then
+  echo "public demo failed: gateway did not open UDP sockets before timeout" >&2
+  exit 1
+fi
 
 cargo run --bin sitl-send-arm-command -- 127.0.0.1:14651 >>"$demo_log" 2>&1
 sleep 0.5
@@ -103,6 +112,11 @@ if ! grep -q '^shadow_signing_would_reject_total 1$' "$metrics_path"; then
   exit 1
 fi
 
+if ! grep -q '^commands_critical_observed_total 1$' "$metrics_path"; then
+  echo "public demo failed: expected commands_critical_observed_total 1" >&2
+  exit 1
+fi
+
 cat > "$evidence_dir/expected-results.md" <<'EOF'
 # Expected Results
 
@@ -116,6 +130,7 @@ cat > "$evidence_dir/expected-results.md" <<'EOF'
 - `metrics.prom` must contain `packets_blocked_total 1`.
 - `metrics.prom` must contain `shadow_policy_would_block_total 1`.
 - `metrics.prom` must contain `shadow_signing_would_reject_total 1`.
+- `metrics.prom` must contain `commands_critical_observed_total 1`.
 EOF
 
 cat > "$evidence_dir/claims.md" <<'EOF'
