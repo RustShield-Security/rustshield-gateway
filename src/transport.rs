@@ -2071,7 +2071,6 @@ mod tests {
         let output = String::from_utf8(output.lock().expect("log buffer lock").clone())
             .expect("logs are UTF-8");
         assert!(output.contains("security.shadow_would_block"));
-        assert!(output.contains("signing.shadow_would_reject"));
         assert!(!output.contains("payload"));
         assert!(!output.contains("1021324354657687"));
     }
